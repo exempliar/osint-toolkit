@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSINT Learning Tool</title>
+<style>
+  :root{
+    --bg:#050507;
+    --panel:#0d0d11;
+    --panel2:#101016;
+    --line:#1c1c24;
+    --line2:#262630;
+    --txt:#e7e7ee;
+    --muted:#8b8b98;
+    --dim:#5a5a67;
+    --cyan:#2fe4d4;
+    --cyandim:#155e58;
+    --mag:#ff5db1;
+    --magdim:#5e2545;
+    --amber:#ffcf5c;
+    --green:#7be88a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--txt);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  code,.mono{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace}
+  a{color:var(--cyan);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button{font-family:inherit;cursor:pointer;color:var(--txt);background:transparent;border:1px solid var(--line2);border-radius:0}
+  button:hover{border-color:var(--cyan)}
+  input,textarea,select{font-family:inherit;color:var(--txt);background:var(--panel2);border:1px solid var(--line2);border-radius:0;outline:none}
+  input:focus,textarea:focus,select:focus{border-color:var(--cyan)}
+  ::placeholder{color:var(--dim)}
+
+  .wrap{max-width:1240px;margin:0 auto;padding:22px 20px 60px}
+
+  header.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px}
+  .brand{display:flex;align-items:baseline;gap:12px}
+  .brand h1{font-size:16px;letter-spacing:2px;font-weight:600;margin:0;text-transform:uppercase}
+  .brand h1 .dot{color:var(--cyan)}
+  .brand .tag{color:var(--muted);font-size:12px}
+  .topnav{display:flex;gap:14px;font-size:12px}
+  .topnav a{color:var(--muted);cursor:pointer;letter-spacing:.5px}
+  .topnav a:hover{color:var(--cyan);text-decoration:none}
+
+  .inputrow{display:flex;gap:0;border:1px solid var(--line2);align-items:stretch}
+  .inputrow input{flex:1;border:none;background:transparent;padding:14px 16px;font-size:16px}
+  .inputrow .mono{letter-spacing:.3px}
+  .detect{display:flex;align-items:center;gap:10px;margin:10px 2px 22px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+  .detect .k{color:var(--cyan);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+  .detect select{padding:5px 8px;font-size:12px}
+  .frameline{color:var(--txt);border-left:2px solid var(--cyan);padding-left:12px;margin:0 0 22px;font-size:13.5px;color:#cfd0d8}
+
+  .cols{display:grid;grid-template-columns:1fr 340px;gap:22px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+
+  .section-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+
+  /* prompts */
+  .prompts{margin-bottom:24px}
+  .modebar{display:flex;gap:8px;margin-bottom:0}
+  .modebar button{padding:8px 14px;font-size:12px;letter-spacing:.5px;color:var(--muted);border-bottom:none}
+  .modebar button.on{color:var(--cyan);border-color:var(--cyan)}
+  .promptbox{border:1px solid var(--line2);border-top:1px solid var(--cyan);padding:0}
+  .promptbox textarea{width:100%;border:none;background:var(--panel);padding:14px 16px;resize:vertical;min-height:120px;font-size:13px;line-height:1.55;color:#d7d8e0}
+  .promptbox .bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px}
+  .promptbox .bar .why{max-width:70%}
+  .copybtn{padding:6px 14px;font-size:12px;letter-spacing:.5px;color:var(--cyan);border-color:var(--cyandim)}
+  .copybtn.done{color:var(--green);border-color:var(--green)}
+
+  /* view toggle */
+  .viewhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .toggle{display:flex}
+  .toggle button{padding:6px 14px;font-size:12px;letter-spacing:.5px;color:var(--muted)}
+  .toggle button.on{color:var(--cyan);border-color:var(--cyan)}
+  .toggle button+button{border-left:none}
+
+  /* graph */
+  #graph{width:100%;height:460px;border:1px solid var(--line);background:
+     radial-gradient(circle at 50% 46%, #0c0c12 0%, #060608 70%)}
+  .gnode{cursor:pointer}
+  .gnode text{font-size:10.5px;fill:var(--muted)}
+  .gnode:hover text{fill:var(--txt)}
+  .glink{stroke:var(--line2);stroke-width:1}
+  .glink.pivot{stroke:var(--magdim);stroke-dasharray:3 4}
+  .center-label{fill:var(--txt);font-size:12px;letter-spacing:1px;text-transform:uppercase}
+  .center-sub{fill:var(--dim);font-size:9.5px}
+  .glegend{fill:var(--dim);font-size:10px}
+
+  /* bring findings back */
+  .bringback{margin-bottom:24px}
+  #aiout{width:100%;min-height:76px;padding:12px 14px;font-size:13px;resize:vertical}
+  .bbbar{display:flex;align-items:center;gap:12px;margin-top:8px}
+  .bbbar button{padding:8px 14px;font-size:12px;letter-spacing:.5px;color:var(--cyan);border-color:var(--cyandim)}
+  #extracted{margin-top:12px;display:none}
+  #extracted.on{display:block;border-top:1px solid var(--line)}
+  .exrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px}
+  .exrow .ty{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);min-width:64px}
+  .exrow .vl{color:var(--txt);word-break:break-all}
+  .exrow .go,.exrow .add{font-size:11px;letter-spacing:.5px;color:var(--muted);cursor:pointer;white-space:nowrap;border:1px solid var(--line2);padding:4px 9px}
+  .exrow .go:hover,.exrow .add:hover{color:var(--cyan);border-color:var(--cyan)}
+  .exrow .add.in{color:var(--green);border-color:var(--green)}
+
+  /* list */
+  .srclist{border-top:1px solid var(--line)}
+  .srcitem{display:grid;grid-template-columns:12px 1fr 18px;gap:12px;align-items:start;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+  .srcitem:hover{background:var(--panel)}
+  .srcitem.sel{background:var(--panel2)}
+  .cdot{width:8px;height:8px;margin-top:5px}
+  .cdot.passive{background:var(--cyan)}
+  .cdot.active{background:var(--mag)}
+  .srcitem .l1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .srcitem .nm{font-weight:600}
+  .srcitem .ds{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .srcitem .pv{color:#b7b8c2;font-size:12px;margin-top:3px}
+  .srcitem .pv b{color:var(--mag)}
+  .srcitem .meta{font-size:10.5px;color:var(--dim);letter-spacing:.5px;white-space:nowrap}
+  .star{color:var(--dim);font-size:15px;line-height:1;margin-top:2px}
+  .star.on{color:var(--amber)}
+  .caseitem{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:7px 0;font-size:12.5px;border-bottom:1px solid var(--line);cursor:pointer}
+  .caseitem:last-child{border-bottom:none}
+  .caseitem:hover .cv{color:var(--cyan)}
+  .caseitem .cty{font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim)}
+  .caseitem .cv{color:var(--txt);word-break:break-all}
+  .caseitem .x{color:var(--dim);cursor:pointer}
+
+  /* detail panel */
+  .panel{border:1px solid var(--line);padding:0;position:sticky;top:16px}
+  .panel .ph{padding:14px 16px;border-bottom:1px solid var(--line)}
+  .panel .ph .nm{font-size:15px;font-weight:600}
+  .panel .ph .sub{font-size:11px;color:var(--muted);margin-top:3px}
+  .panel .pb{padding:14px 16px}
+  .panel .pb p{margin:0 0 12px;font-size:13px;color:#cfd0d8}
+  .panel .pb .lab{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:3px}
+  .panel .pb .why{color:var(--muted)}
+  .panel .pv{color:var(--txt)}
+  .panel .pv b{color:var(--mag);font-weight:600}
+  .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;font-size:11px;color:var(--muted)}
+  .tags .t{border:1px solid var(--line2);padding:3px 8px}
+  .pactions{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+  .pactions button{padding:8px 12px;font-size:12px;letter-spacing:.5px;flex:1}
+  .pactions .open{color:var(--cyan);border-color:var(--cyandim)}
+  .panel .empty{padding:26px 16px;color:var(--dim);font-size:12.5px;text-align:center}
+
+  /* side blocks */
+  .side{margin-top:20px;border:1px solid var(--line)}
+  .side h3{margin:0;padding:12px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .side .body{padding:12px 16px}
+  .fav{display:flex;justify-content:space-between;padding:6px 0;font-size:12.5px;border-bottom:1px solid var(--line);cursor:pointer}
+  .fav:last-child{border-bottom:none}
+  .fav:hover{color:var(--cyan)}
+  .fav .x{color:var(--dim)}
+  #notes{width:100%;min-height:90px;padding:10px;font-size:12.5px;resize:vertical}
+  .miniactions{display:flex;gap:8px;margin-top:8px}
+  .miniactions button{padding:6px 10px;font-size:11px;flex:1}
+  .muted-note{color:var(--dim);font-size:11.5px}
+
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow:auto}
+  .modal.on{display:flex}
+  .modal .box{max-width:760px;width:100%;background:var(--panel);border:1px solid var(--line2)}
+  .modal .mh{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .modal .mh h2{margin:0;font-size:13px;letter-spacing:1.5px;text-transform:uppercase}
+  .modal .mh .close{color:var(--muted);font-size:18px;border:none}
+  .modal .mb{padding:18px}
+  .concept{border-top:1px solid var(--line);padding:14px 0}
+  .concept:first-child{border-top:none}
+  .concept h4{margin:0 0 6px;font-size:13.5px;color:var(--cyan)}
+  .concept p{margin:0;color:#cfd0d8;font-size:13px}
+  .concept .scale{margin-top:8px;font-size:12px;color:var(--muted)}
+  .formrow{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+  .formrow label{font-size:11px;letter-spacing:.5px;color:var(--muted);text-transform:uppercase}
+  .formrow input,.formrow select{padding:9px 11px;font-size:13px}
+  .addbtn{padding:9px 16px;color:var(--cyan);border-color:var(--cyandim);font-size:12px;letter-spacing:.5px}
+  footer{margin-top:40px;border-top:1px solid var(--line);padding-top:14px;color:var(--dim);font-size:11.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>OSINT Learning Tool<span class="dot">.</span></h1>
+      <span class="tag">Type a value. Learn where to look, and why.</span>
+    </div>
+    <nav class="topnav">
+      <a id="nav-tradecraft">Tradecraft</a>
+      <a id="nav-add">Add source</a>
+      <a id="nav-about">About</a>
+    </nav>
+  </header>
+
+  <div class="inputrow">
+    <input id="q" class="mono" placeholder="Paste an IP, domain, email, username, hash, name, wallet, or a topic..." autocomplete="off" spellcheck="false">
+  </div>
+  <div class="detect">
+    <span>Detected:</span>
+    <span class="k" id="detected">topic</span>
+    <span>Not right?</span>
+    <select id="override"></select>
+  </div>
+
+  <p class="frameline" id="frame"></p>
+  <div style="margin:-12px 2px 22px"><button id="addcase" style="padding:6px 12px;font-size:11.5px;letter-spacing:.5px;color:var(--muted)">+ Add this value to case</button></div>
+
+  <div class="cols">
+    <div class="main">
+
+      <div class="prompts">
+        <div class="section-label">AI prompt (copy into any model)</div>
+        <div class="modebar" id="modebar"></div>
+        <div class="promptbox">
+          <textarea id="prompt" readonly></textarea>
+          <div class="bar">
+            <span class="why" id="promptwhy"></span>
+            <button class="copybtn" id="copyprompt">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bringback">
+        <div class="section-label">Bring findings back</div>
+        <textarea id="aiout" placeholder="Paste your AI's answer here. The tool pulls out the indicators it mentions (IPs, domains, emails, hashes, wallets) and turns each into a pivot you can launch or add to the case."></textarea>
+        <div class="bbbar">
+          <button id="extract">Extract pivots</button>
+          <span class="muted-note" id="extractnote"></span>
+        </div>
+        <div id="extracted"></div>
+      </div>
+
+      <div class="viewhead">
+        <div class="section-label" style="margin:0">Where to look</div>
+        <div class="toggle">
+          <button id="v-map" class="on">Map</button>
+          <button id="v-list">List</button>
+        </div>
+      </div>
+
+      <div id="mapview">
+        <svg id="graph" viewBox="0 0 720 460" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div id="listview" style="display:none">
+        <div class="srclist" id="srclist"></div>
+      </div>
+
+    </div>
+
+    <aside class="rail">
+      <div class="panel" id="panel">
+        <div class="empty" id="panelempty">Select a source to see what it tells you, why it matters, and where it pivots.</div>
+        <div id="paneldata" style="display:none"></div>
+      </div>
+
+      <div class="side">
+        <h3>Case <span style="display:flex;gap:10px;align-items:center"><span class="muted-note" id="casecount"></span><a id="exportcase" style="font-size:11px;letter-spacing:.5px;cursor:pointer">Export .md</a></span></h3>
+        <div class="body" id="casebody"><span class="muted-note">Collect entities as you pivot. Add the current value, or pull them from a pasted AI answer above.</span></div>
+      </div>
+
+      <div class="side">
+        <h3>Favorites <span class="muted-note" id="favcount"></span></h3>
+        <div class="body" id="favbody"><span class="muted-note">Star a source to pin it. Saved to this browser.</span></div>
+      </div>
+
+      <div class="side">
+        <h3>Case notes</h3>
+        <div class="body">
+          <textarea id="notes" placeholder="Jot what each pivot returned..."></textarea>
+          <div class="miniactions">
+            <button id="savenotes">Save</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <span>Runs fully offline. Nothing you type leaves this file. Save it, edit it, make it yours.</span>
+    <span id="memstatus"></span>
+  </footer>
+</div>
+
+<!-- Tradecraft modal -->
+<div class="modal" id="m-tradecraft">
+  <div class="box">
+    <div class="mh"><h2>Tradecraft</h2><button class="close" data-close>&times;</button></div>
+    <div class="mb" id="tradecraftbody"></div>
+  </div>
+</div>
+
+<!-- Add source modal -->
+<div class="modal" id="m-add">
+  <div class="box">
+    <div class="mh"><h2>Add your own source</h2><button class="close" data-close>&times;</button></div>
+    <div class="mb">
+      <p class="muted-note" style="margin-top:0">Adds to the current indicator type and saves to this browser. Use <code>{{input}}</code> where the value goes in the link.</p>
+      <div class="formrow"><label>Name</label><input id="a-name" placeholder="e.g. My favorite lookup"></div>
+      <div class="formrow"><label>Link template</label><input id="a-url" class="mono" placeholder="https://example.com/search?q={{input}}"></div>
+      <div class="formrow"><label>What it tells you</label><input id="a-tells" placeholder="One line."></div>
+      <div class="formrow"><label>Why use it</label><input id="a-why" placeholder="One line."></div>
+      <div class="formrow"><label>Collection</label>
+        <select id="a-coll"><option value="passive">passive</option><option value="active">active</option></select>
+      </div>
+      <button class="addbtn" id="a-save">Add source</button>
+    </div>
+  </div>
+</div>
+
+<!-- About modal -->
+<div class="modal" id="m-about">
+  <div class="box">
+    <div class="mh"><h2>About</h2><button class="close" data-close>&times;</button></div>
+    <div class="mb">
+      <p style="margin-top:0;color:#cfd0d8">A single file that teaches OSINT by doing. Type one value: it names what you are holding, frames what you are trying to learn, hands you a model-agnostic AI prompt, and maps where to look and where to pivot, with the reasoning attached.</p>
+      <p style="color:#cfd0d8">This is a launcher and a teacher, not a scraper. It never fetches data or touches a target. Links open in a new tab; the AI prompts are copy and paste into whatever model you use.</p>
+      <p style="color:#cfd0d8">Save it locally and it remembers your favorites, notes, and any sources you add. Share it and each person builds their own copy.</p>
+      <p class="muted-note">Passive means you query a third party, not the target. Active means your action touches the target. Active sources are marked. Think before you run them.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------- DATA ---------------- */
+
+var INDICATORS = {
+  ip:{label:"IP address", frame:"You are learning what this host is, who runs it, its reputation, and what it connects to."},
+  domain:{label:"Domain", frame:"You are learning who owns it, its infrastructure and history, and whether it is malicious."},
+  url:{label:"URL", frame:"You are learning where this link really goes, what it serves, and whether it is hostile, without clicking it."},
+  email:{label:"Email address", frame:"You are learning who is behind it, where it has been exposed, and what accounts it links to."},
+  username:{label:"Username", frame:"You are learning where this handle exists across platforms and which accounts belong to the same person."},
+  hash:{label:"File hash", frame:"You are learning if this file is known malware, what it does, and who has reported it."},
+  person:{label:"Person / name", frame:"You are learning what is publicly known about this person and how to corroborate it."},
+  phone:{label:"Phone number", frame:"You are learning the line type, carrier, region, and any accounts or listings tied to it."},
+  company:{label:"Company / org", frame:"You are learning the legal entity, ownership, filings, and digital footprint."},
+  crypto:{label:"Crypto wallet", frame:"You are learning the balance, transaction history, and any abuse or attribution tied to the address."},
+  image:{label:"Image", frame:"You are learning where else the image appears, what it depicts, and what its metadata reveals. This lane is manual: use the tools, upload or paste the image there."},
+  topic:{label:"Topic / subject", frame:"You have no single indicator. You are scoping a subject and finding primary sources to build from."}
+};
+
+// pivots: which other indicator types this one commonly leads to
+var PIVOTS = {
+  ip:["domain","hash","company"],
+  domain:["ip","email","url","company"],
+  url:["domain","hash","ip"],
+  email:["username","person","domain"],
+  username:["email","person","image"],
+  hash:["ip","domain","url"],
+  person:["username","email","phone","company"],
+  phone:["person","username"],
+  company:["domain","person","email"],
+  crypto:["url","topic"],
+  image:["person","username","topic"],
+  topic:["person","company","domain"]
+};
+
+// s(name, url-or-null, tells, why, pivot, collection, cost, level)
+function s(name,url,tells,why,pivot,collection,cost,level){
+  return {name:name,url:url,tells:tells,why:why,pivot:pivot,collection:collection||"passive",cost:cost||"free",level:level||"new"};
+}
+
+var SOURCES = {
+  ip:[
+    s("VirusTotal","https://www.virustotal.com/gui/ip-address/{{input}}","Reputation, resolutions, detections, related files.","Fast reputation and history in one view.","Passed domains and files that resolved here.","passive","free"),
+    s("Shodan","https://www.shodan.io/host/{{input}}","Open ports, service banners, exposed software, past scans.","Tells you what the host actually runs before you touch it.","Service versions to CVE lookups; org to company research.","passive","account"),
+    s("Censys","https://search.censys.io/hosts/{{input}}","Ports, certificates, services with deeper cert detail.","A second infra view; strong on certificates.","Certs to other hosts and domains.","passive","account"),
+    s("GreyNoise","https://viz.greynoise.io/ip/{{input}}","Whether the IP is mass-scanning the internet.","Separates targeted from internet-wide background noise.","Noise verdict shapes how much the hit matters.","passive","account"),
+    s("AbuseIPDB","https://www.abuseipdb.com/check/{{input}}","Community abuse reports and categories.","Crowd signal on whether the IP is known-bad.","Reported domains and campaigns.","passive","account"),
+    s("IPinfo","https://ipinfo.io/{{input}}","Geolocation, ASN, org, hosting or residential.","Grounds the IP in who owns and routes it.","ASN and org to the wider netblock and company.","passive","free"),
+    s("Hurricane BGP","https://bgp.he.net/ip/{{input}}","ASN, prefix, and routing neighborhood.","Maps the IP to its network and operator.","ASN to sibling ranges.","passive","free"),
+    s("ARIN RDAP","https://search.arin.net/rdap/?query={{input}}","Registration and allocation records.","Authoritative owner and abuse contact.","Org name and netblock.","passive","free"),
+    s("Pulsedive","https://pulsedive.com/indicator/?ioc={{input}}","Aggregated threat context and links.","One pane of aggregated IOC context.","Linked domains and threats.","passive","free")
+  ],
+  domain:[
+    s("VirusTotal","https://www.virustotal.com/gui/domain/{{input}}","Reputation, DNS, subdomains, detections.","Broad first look at reputation and structure.","Resolving IPs and sibling subdomains.","passive","free"),
+    s("crt.sh","https://crt.sh/?q={{input}}","Every TLS certificate issued for the domain.","Certificate logs quietly leak subdomains and timing.","Subdomains and issuance dates to new assets.","passive","free"),
+    s("SecurityTrails","https://securitytrails.com/domain/{{input}}/dns","Current and historical DNS and WHOIS.","History shows what a domain used to point at.","Past IPs and shared-host neighbors.","passive","account"),
+    s("urlscan.io","https://urlscan.io/domain/{{input}}","Past scans: screenshots, requests, tech.","See what the site served without visiting it.","Contacted domains and served files.","passive","free"),
+    s("Whois","https://who.is/whois/{{input}}","Registrar, dates, nameservers, contacts.","Ownership and age, a core attribution anchor.","Registrant email or org to pivot.","passive","free"),
+    s("Wayback Machine","https://web.archive.org/web/*/{{input}}","Historical snapshots of the site.","Recover removed pages and past intent.","Old links, emails, and staff names.","passive","free"),
+    s("DNSDumpster","https://dnsdumpster.com/","DNS map, subdomains, MX, hosts.","Quick passive DNS picture. Enter the domain on the page.",null,"passive","free"),
+    s("Shodan (domain)","https://www.shodan.io/domain/{{input}}","Hosts and services tied to the domain.","Ties the name to exposed infrastructure.","Hosts to the IP lane.","passive","account"),
+    s("Google (site:)","https://www.google.com/search?q=site%3A{{input}}","Indexed pages under the domain.","Reveals exposed paths and content fast.","Interesting paths and linked assets.","passive","free")
+  ],
+  url:[
+    s("urlscan.io","https://urlscan.io/search/#page.url%3A%22{{input}}%22","Sandbox of the page: screenshot, requests, verdict.","See the destination safely, no click.","Redirect chain, contacted hosts, served files.","passive","free"),
+    s("VirusTotal","https://www.virustotal.com/gui/search/{{input}}","Multi-engine verdict on the URL.","Fast malicious or clean read.","Hosting IP and file drops.","passive","free"),
+    s("Google Transparency","https://transparencyreport.google.com/safe-browsing/search?url={{input}}","Safe Browsing status.","Independent phishing and malware check.","Confirms or challenges other verdicts.","passive","free"),
+    s("Wayback Machine","https://web.archive.org/web/*/{{input}}","Archived versions of the exact URL.","Recover content that has since changed.","Old content and links.","passive","free"),
+    s("Hybrid Analysis","https://www.hybrid-analysis.com/search?query={{input}}","Sandbox reports if submitted before.","Behavioral detail on hostile links.","Dropped hashes and C2.","passive","account"),
+    s("Unshorten.it","https://unshorten.it/","Expands a shortened link.","Reveals the true destination before you go. Paste on page.","Real domain to the domain lane.","passive","free")
+  ],
+  email:[
+    s("Have I Been Pwned","https://haveibeenpwned.com/","Breaches and pastes exposing the address.","Shows where the account has leaked. Enter on page.","Breach names to password and site pivots.","passive","free"),
+    s("Epieos","https://epieos.com/","Linked Google and other account services.","Maps an email to accounts without alerting the owner.","Linked accounts, name, photo.","passive","free"),
+    s("Hunter","https://hunter.io/email-verifier/{{input}}","Deliverability and pattern for the domain.","Confirms the address and its org format.","Domain email pattern to more staff.","passive","account"),
+    s("EmailRep","https://emailrep.io/{{input}}","Reputation, profiles, and risk signals.","Quick reputation and exposure summary.","Linked profiles to usernames.","passive","free"),
+    s("IntelX","https://intelx.io/?s={{input}}","Leaks, pastes, and archived mentions.","Deep exposure search across data dumps.","Related identifiers in dumps.","passive","account"),
+    s("Google (exact)","https://www.google.com/search?q=%22{{input}}%22","Public pages mentioning the address.","Where the owner used it in the open.","Usernames, sites, and names.","passive","free")
+  ],
+  username:[
+    s("WhatsMyName","https://whatsmyname.app/","Presence across hundreds of sites.","The standard enumeration sweep, curated and accurate.","Confirmed profiles to deeper pivots.","passive","free"),
+    s("IDCrawl","https://www.idcrawl.com/u/{{input}}","Aggregated profiles across platforms.","Fast people-and-handle aggregation.","Real name and linked accounts.","passive","free"),
+    s("Namechk","https://namechk.com/","Availability across platforms and domains.","Availability implies where the handle is taken.","Taken platforms to check.","passive","free"),
+    s("Sherlock","https://github.com/sherlock-project/sherlock","Hunts the username across sites (CLI tool).","Scriptable, thorough enumeration for repeat use.","Profiles to correlate.","passive","free","intermediate"),
+    s("Instant Username","https://instantusername.com/","Live availability check across services.","Fast visual sweep of where it exists.","Existing profiles.","passive","free"),
+    s("Google (exact)","https://www.google.com/search?q=%22{{input}}%22","Mentions of the handle in the open.","Catches sites the enumerators miss.","Names, emails, other handles.","passive","free")
+  ],
+  hash:[
+    s("VirusTotal","https://www.virustotal.com/gui/file/{{input}}","Detections, behavior, relations.","The default first stop for any file hash.","Contacted IPs and domains; similar files.","passive","free"),
+    s("MalwareBazaar","https://bazaar.abuse.ch/browse.php?search=sha256%3A{{input}}","Samples, tags, and family labels.","Free malware repository with family context.","Family and signatures.","passive","free"),
+    s("Triage","https://tria.ge/s?q={{input}}","Sandbox behavior reports.","Readable dynamic analysis, free tier.","Config, C2, dropped files.","passive","account"),
+    s("Hybrid Analysis","https://www.hybrid-analysis.com/search?query={{input}}","Behavioral sandbox detail.","Deep behavior and IOC extraction.","Network IOCs to pivot.","passive","account"),
+    s("ThreatFox","https://threatfox.abuse.ch/browse.php?search=hash%3A{{input}}","IOC context and linked campaigns.","Ties the file to known threats.","Actor and infrastructure links.","passive","free"),
+    s("MetaDefender","https://metadefender.opswat.com/results#!/file/{{input}}/hash/overview","Multi-engine hash reputation.","A second opinion beyond VT.","Detection names.","passive","free")
+  ],
+  person:[
+    s("Google (structured)","https://www.google.com/search?q=%22{{input}}%22","Public mentions of the name.","Start broad, then add location and employer to narrow.","Usernames, employers, locations.","passive","free"),
+    s("IDCrawl","https://www.idcrawl.com/{{input}}","Aggregated profiles and records.","Pulls scattered public profiles together.","Handles, relatives, locations.","passive","free"),
+    s("That'sThem","https://thatsthem.com/name/{{input}}","Public contact and address records.","Free people-record lookup.","Phone and address to new lanes.","passive","free"),
+    s("FastPeopleSearch","https://www.fastpeoplesearch.com/name/{{input}}","US address, phone, relatives.","Strong free US public-records source.","Relatives and prior addresses.","passive","free"),
+    s("LinkedIn (via Google)","https://www.google.com/search?q=site%3Alinkedin.com+%22{{input}}%22","Professional history and employer.","Finds the profile without logging in.","Employer to company lane.","passive","free"),
+    s("WebMii","https://webmii.com/people?n=%22{{input}}%22","Web presence score and links.","Surfaces links a name search buries.","Profiles and mentions.","passive","free")
+  ],
+  phone:[
+    s("Google (exact)","https://www.google.com/search?q=%22{{input}}%22","Public listings mentioning the number.","Often the fastest tie to a name or business.","Name, business, listings.","passive","free"),
+    s("NumLookup","https://www.numlookup.com/","Carrier, line type, and region.","Free validation and carrier lookup. Enter on page.","Region and carrier context.","passive","free"),
+    s("Truecaller","https://www.truecaller.com/search/","Crowd-sourced caller name.","Crowd names for unknown numbers. Search on page.","Name to person lane.","passive","account"),
+    s("That'sThem (phone)","https://thatsthem.com/phone/{{input}}","Reverse-lookup to name and address.","Free reverse phone records.","Owner to person lane.","passive","free"),
+    s("Sync.me","https://sync.me/search/?number={{input}}","Caller ID and spam reports.","Second crowd source and spam signal.","Name and reputation.","passive","free")
+  ],
+  company:[
+    s("OpenCorporates","https://opencorporates.com/companies?q={{input}}","Legal entity, jurisdiction, officers.","The largest open company registry.","Officers and addresses to people.","passive","free"),
+    s("SEC EDGAR","https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company={{input}}&type=&dateb=&owner=include&count=40","US filings and financials.","Primary-source filings for US public firms.","Executives and subsidiaries.","passive","free"),
+    s("Aleph (OCCRP)","https://aleph.occrp.org/search?q={{input}}","Investigative datasets and leaks.","Cross-border records and leak archives.","Linked people and entities.","passive","free"),
+    s("Crunchbase","https://www.crunchbase.com/textsearch?q={{input}}","Funding, people, and profile.","Fast profile for tech and startups.","Founders and domains.","passive","account"),
+    s("Google (site + name)","https://www.google.com/search?q=%22{{input}}%22","Open web footprint.","Grounds the entity in its own pages.","Official domain and staff.","passive","free"),
+    s("BuiltWith","https://builtwith.com/","Tech stack of the company site.","Infra and vendor footprint. Enter the domain.","Analytics and hosting to pivots.","passive","free")
+  ],
+  crypto:[
+    s("Blockchair","https://blockchair.com/search?q={{input}}","Multi-chain address and tx lookup.","One search across many chains.","Counterparties and clusters.","passive","free"),
+    s("Etherscan","https://etherscan.io/address/{{input}}","Ethereum balance, tokens, tx history.","Authoritative ETH explorer.","Counterparty addresses and contracts.","passive","free"),
+    s("Blockchain.com","https://www.blockchain.com/explorer/addresses/btc/{{input}}","Bitcoin balance and transactions.","Authoritative BTC explorer.","Input and output addresses.","passive","free"),
+    s("Chainabuse","https://www.chainabuse.com/address/{{input}}","Community scam and abuse reports.","Tells you if the address is reported bad.","Linked scams and addresses.","passive","free"),
+    s("OXT / clustering","https://oxt.me/","Bitcoin flow and clustering views.","Visual flow analysis for BTC. Search on page.","Clustered wallets.","passive","free","intermediate")
+  ],
+  image:[
+    s("Yandex Images","https://yandex.com/images/","Reverse image search, strong on places and faces.","Often the best reverse-image engine. Upload or paste URL.","Locations and people to new lanes.","passive","free"),
+    s("Google Lens","https://lens.google.com/","Reverse search and object and text recognition.","Great for objects, landmarks, and text.","Matched pages and places.","passive","free"),
+    s("TinEye","https://tineye.com/","Finds exact copies and earliest use.","Best for tracing an image to its origin.","Original source and date.","passive","free"),
+    s("Bing Visual","https://www.bing.com/visualsearch","Reverse image with different index.","A third index catches what others miss.","Matched pages.","passive","free"),
+    s("Jimpl (EXIF)","https://jimpl.com/","Metadata: camera, time, sometimes GPS.","Metadata can hand you time and place. Upload there.","GPS to a map; time to a timeline.","passive","free"),
+    s("FotoForensics","https://fotoforensics.com/","Error-level and manipulation analysis.","Signals editing or forgery.","Manipulation verdict.","passive","free","intermediate")
+  ],
+  topic:[
+    s("Google Advanced","https://www.google.com/advanced_search","Operators: site, filetype, intitle, dates.","Structured queries beat keyword guessing.","Primary docs and named entities.","passive","free"),
+    s("Google Scholar","https://scholar.google.com/scholar?q={{input}}","Academic and technical papers.","Primary research and expert names.","Authors and citations.","passive","free"),
+    s("Wayback Machine","https://web.archive.org/web/*/{{input}}","Archived pages on the subject.","Recover deleted or changed sources.","Old sources and links.","passive","free"),
+    s("X Advanced Search","https://twitter.com/search-advanced","Filter posts by user, date, terms.","Real-time and first-hand accounts.","Accounts and firsthand media.","passive","account"),
+    s("Reddit Search","https://www.reddit.com/search/?q={{input}}","Community discussion and niche detail.","Practitioners often post here first.","Usernames and linked sources.","passive","free"),
+    s("Wikipedia","https://en.wikipedia.org/w/index.php?search={{input}}","Overview and sourced references.","Use it as a map to primary sources in its footnotes.","Cited primary sources.","passive","free")
+  ]
+};
+
+// article helper: "an IP address", "a domain", but "a URL" (consonant sound)
+function art(l){ if(/^U/.test(l)) return "a "+l; return (/^[aeiou]/i.test(l)?"an ":"a ")+l; }
+
+var PROMPT_MODES = [
+  {id:"learn", label:"Learn", why:"Teaches the method for this indicator type.",
+   build:function(l,v){return "I am learning OSINT. I have "+art(l)+": "+v+"\n\nAct as a senior OSINT analyst and teach me how to investigate it. In order, explain:\n1. What this kind of indicator can and cannot tell me.\n2. Which categories of sources to check, and why each one matters.\n3. A sensible first three moves.\n4. The mistakes beginners make with this indicator type.\n\nKeep it practical and explain the reasoning, not just tool names. Note which steps are passive and which touch the target.";}},
+  {id:"pivot", label:"Pivot", why:"Turns a finding into the next best moves.",
+   build:function(l,v){return "I am investigating "+art(l)+": "+v+"\n\nI have gathered some initial results. Act as a senior OSINT analyst. Given what "+art(l)+" typically reveals, list the highest-value pivots I should make next. For each pivot, tell me what it would confirm or rule out, and how to prioritize them. Flag which pivots are passive and which are active.";}},
+  {id:"verify", label:"Verify", why:"Pressure-tests a finding before you trust it.",
+   build:function(l,v){return "I found information about "+art(l)+": "+v+"\n\nAct as a skeptical OSINT analyst. Help me verify it before I trust it:\n- What independent corroboration should I seek?\n- What would a false positive, stale record, or planted result look like here?\n- What are the reliability limits of the common sources for this indicator?\n- How should I grade my confidence, and what would raise or lower it?";}},
+  {id:"report", label:"Report", why:"Shapes findings into an analyst-grade write-up.",
+   build:function(l,v){return "Help me write up an OSINT finding about "+art(l)+": "+v+"\n\nStructure it as:\n- Summary (two sentences)\n- Key findings\n- Supporting sources\n- Confidence level, with the reasoning\n- Recommended next steps\n\nKeep it concise and analyst-grade. Clearly flag anything unverified.";}}
+];
+
+var TRADECRAFT = [
+  {h:"Passive vs active collection", p:"Passive means you query a third party, not the target: a WHOIS record, a cached scan, a breach index. Active means your action reaches the target itself: loading its site, scanning its ports, calling its number. Active can tip off the subject and can carry legal weight. Default to passive, and know which is which before you act."},
+  {h:"Pivoting", p:"A pivot is turning one fact into the next lead. An email reveals a username, which reveals a photo, which reverse-searches to a real name, which reveals an employer. Good OSINT is a chain of pivots, not a single lookup. On each result, ask: what does this let me search for next?"},
+  {h:"Source reliability", p:"Weigh the source and the information separately. The NATO Admiralty scale grades the source A to F (reliable to unreliable) and the information 1 to 6 (confirmed to improbable). A crowd-report site can be reliable in general yet wrong on one entry. Note both when you record a finding.", scale:"A-F source reliability, 1-6 information credibility."},
+  {h:"Corroborate, never single-source", p:"One source is a lead, not a fact. Confirm anything that matters with a second independent source that does not draw from the first. Watch for circular reporting, where three sites all copied one original."},
+  {h:"Operational security", p:"Do not log into, scan, or message a target from an account that identifies you. Use a research browser or sock puppet, expect that some sites log your queries, and never let a live investigation touch attacker infrastructure. The goal is to observe without being observed."},
+  {h:"The intelligence cycle", p:"Direction, collection, processing, analysis, dissemination. Start from a clear question, gather against it, make sense of what you found, then communicate it. A lookup is only the collection step. The value is in framing the question first and the analysis after."}
+];
+
+/* ---------------- STATE + STORAGE ---------------- */
+
+var state = { type:"topic", value:"", mode:"learn", view:"map", selected:null };
+var MEM_OK = (function(){ try{ var k="__olt"; localStorage.setItem(k,"1"); localStorage.removeItem(k); return true; }catch(e){ return false; } })();
+
+function memGet(k,def){ if(!MEM_OK) return def; try{ var v=localStorage.getItem(k); return v==null?def:JSON.parse(v); }catch(e){ return def; } }
+function memSet(k,v){ if(!MEM_OK) return; try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+var favorites = memGet("olt_favorites", []);        // array of "type::name"
+var customSources = memGet("olt_custom", {});        // type -> [sourceObj]
+var caseData = memGet("olt_case", {entities:[], opened:[]}); // {entities:[{value,type}], opened:[{name,type,url}]}
+if(!caseData.entities) caseData.entities=[]; if(!caseData.opened) caseData.opened=[];
+
+/* ---------------- DETECTION ---------------- */
+
+function detect(v){
+  v = (v||"").trim();
+  if(!v) return "topic";
+  var low = v.toLowerCase();
+  if(/^[a-f0-9]{32}$/i.test(v) || /^[a-f0-9]{40}$/i.test(v) || /^[a-f0-9]{64}$/i.test(v)) return "hash";
+  if(/^(0x)[a-f0-9]{40}$/i.test(v)) return "crypto";
+  if(/^(bc1|[13])[a-z0-9]{25,60}$/i.test(v)) return "crypto";
+  if(/^(https?:\/\/)/i.test(v)) return "url";
+  if(/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return "email";
+  if(/^(\d{1,3}\.){3}\d{1,3}$/.test(v)) return "ip";
+  if(/^[0-9a-f:]+:[0-9a-f:]+$/i.test(v) && v.indexOf(":")>-1 && /[0-9a-f]/i.test(v)) return "ip";
+  if(/^\+?[\d][\d\s().-]{6,}$/.test(v)) return "phone";
+  if(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(low) && /\.[a-z]{2,}$/i.test(low)) return "domain";
+  if(/^[@]?[a-z0-9_.\-]{2,30}$/i.test(v) && v.indexOf(" ")===-1) return "username";
+  if(/\b(inc|llc|ltd|corp|gmbh|group|holdings|technologies|systems|labs)\b/i.test(v)) return "company";
+  if(/^[a-z][a-z'.-]+\s+[a-z][a-z'.-]+/i.test(v) && v.split(/\s+/).length<=4) return "person";
+  return "topic";
+}
+
+/* ---------------- HELPERS ---------------- */
+
+function el(id){ return document.getElementById(id); }
+function esc(t){ return (t==null?"":String(t)).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+function sourcesFor(type){ return (SOURCES[type]||[]).concat(customSources[type]||[]); }
+function favKey(type,name){ return type+"::"+name; }
+function isFav(type,name){ return favorites.indexOf(favKey(type,name))>-1; }
+
+function buildLink(url,value){
+  if(!url) return null;
+  if(url.indexOf("{{input}}")===-1) return url; // tool home page, manual entry
+  return url.replace(/{{input}}/g, encodeURIComponent(value.trim()));
+}
+
+/* ---------------- RENDER ---------------- */
+
+function renderOverride(){
+  var sel = el("override"); sel.innerHTML="";
+  Object.keys(INDICATORS).forEach(function(k){
+    var o=document.createElement("option"); o.value=k; o.textContent=INDICATORS[k].label; sel.appendChild(o);
+  });
+  sel.value = state.type;
+}
+
+function renderFrameAndDetect(){
+  el("detected").textContent = INDICATORS[state.type].label;
+  el("override").value = state.type;
+  el("frame").textContent = INDICATORS[state.type].frame;
+}
+
+function renderModes(){
+  var bar = el("modebar"); bar.innerHTML="";
+  PROMPT_MODES.forEach(function(m){
+    var b=document.createElement("button");
+    b.textContent=m.label; b.className=(m.id===state.mode?"on":"");
+    b.onclick=function(){ state.mode=m.id; renderModes(); renderPrompt(); };
+    bar.appendChild(b);
+  });
+}
+
+function renderPrompt(){
+  var m = PROMPT_MODES.filter(function(x){return x.id===state.mode;})[0];
+  var v = state.value.trim() || "[your value]";
+  el("prompt").value = m.build(INDICATORS[state.type].label, v);
+  el("promptwhy").textContent = m.why;
+  var cb=el("copyprompt"); cb.textContent="Copy"; cb.className="copybtn";
+}
+
+function renderView(){
+  el("mapview").style.display = state.view==="map"?"block":"none";
+  el("listview").style.display = state.view==="list"?"block":"none";
+  el("v-map").className = state.view==="map"?"on":"";
+  el("v-list").className = state.view==="list"?"on":"";
+  if(state.view==="map") renderGraph(); else renderList();
+}
+
+function renderList(){
+  var wrap = el("srclist"); wrap.innerHTML="";
+  sourcesFor(state.type).forEach(function(src,i){
+    var row=document.createElement("div");
+    row.className="srcitem"+(state.selected===src.name?" sel":"");
+    var fav=isFav(state.type,src.name);
+    row.innerHTML =
+      '<span class="cdot '+src.collection+'"></span>'+
+      '<div class="sbody">'+
+        '<div class="l1"><span class="nm">'+esc(src.name)+'</span><span class="meta">'+esc(src.collection)+' &middot; '+esc(src.cost)+'</span></div>'+
+        '<div class="ds">'+esc(src.tells)+'</div>'+
+        (src.pivot?('<div class="pv"><b>&rarr; pivot:</b> '+esc(src.pivot)+'</div>'):'')+
+      '</div>'+
+      '<span class="star'+(fav?' on':'')+'" title="Pin">'+(fav?'★':'☆')+'</span>';
+    row.querySelector(".sbody").onclick=function(){ selectSource(src.name); };
+    row.querySelector(".star").onclick=function(e){ e.stopPropagation(); toggleFav(state.type,src.name); };
+    wrap.appendChild(row);
+  });
+}
+
+function renderGraph(){
+  var svg = el("graph");
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  var W=720,H=460,cx=360,cy=222;
+  var NS="http://www.w3.org/2000/svg";
+  function mk(tag,attrs){ var e=document.createElementNS(NS,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); return e; }
+
+  var srcs = sourcesFor(state.type);
+  var piv = (PIVOTS[state.type]||[]);
+  var Rs=138, Rp=196;
+
+  // pivot links + nodes (outer, magenta, dashed)
+  piv.forEach(function(pt,i){
+    var a=(-Math.PI/2)+(i/piv.length)*Math.PI*2 + Math.PI/piv.length;
+    var x=cx+Rp*Math.cos(a), y=cy+Rp*Math.sin(a)*0.86;
+    svg.appendChild(mk("line",{x1:cx,y1:cy,x2:x,y2:y,"class":"glink pivot"}));
+    var g=mk("g",{"class":"gnode"});
+    g.appendChild(mk("rect",{x:x-4,y:y-4,width:8,height:8,fill:"#0a0a0e",stroke:"var(--mag)","stroke-width":1.2}));
+    var t=mk("text",{x:x,y:y+ (Math.sin(a)>0?18:-10),"text-anchor":"middle"}); t.setAttribute("fill","var(--mag)");
+    t.textContent="→ "+INDICATORS[pt].label; g.appendChild(t);
+    g.style.cursor="pointer";
+    g.onclick=function(){ state.type=pt; state.selected=null; refreshAll(false); };
+    svg.appendChild(g);
+  });
+
+  // source links + nodes (inner ring, cyan)
+  srcs.forEach(function(src,i){
+    var a=(-Math.PI/2)+(i/srcs.length)*Math.PI*2;
+    var x=cx+Rs*Math.cos(a), y=cy+Rs*Math.sin(a)*0.86;
+    svg.appendChild(mk("line",{x1:cx,y1:cy,x2:x,y2:y,"class":"glink"}));
+    var g=mk("g",{"class":"gnode"});
+    var col = src.collection==="active"?"var(--mag)":"var(--cyan)";
+    var fav = isFav(state.type,src.name);
+    g.appendChild(mk("circle",{cx:x,cy:y,r:fav?6:5,fill:"#0a0a0e",stroke:col,"stroke-width":fav?2:1.4}));
+    if(state.selected===src.name) g.appendChild(mk("circle",{cx:x,cy:y,r:10,fill:"none",stroke:col,"stroke-width":1,opacity:.5}));
+    var below = Math.sin(a)>-0.2;
+    var t=mk("text",{x:x,y:y+(below?16:-9),"text-anchor":"middle"});
+    t.textContent=src.name; g.appendChild(t);
+    g.onclick=function(){ selectSource(src.name); };
+    svg.appendChild(g);
+  });
+
+  // center
+  svg.appendChild(mk("circle",{cx:cx,cy:cy,r:44,fill:"#0b0b11",stroke:"var(--cyan)","stroke-width":1.4}));
+  var ct=mk("text",{x:cx,y:cy-2,"text-anchor":"middle","class":"center-label"});
+  ct.textContent=INDICATORS[state.type].label.toUpperCase(); svg.appendChild(ct);
+  var cs=mk("text",{x:cx,y:cy+14,"text-anchor":"middle","class":"center-sub"});
+  cs.textContent=(state.value.trim()? (state.value.length>18?state.value.slice(0,17)+"…":state.value) : "no value yet"); svg.appendChild(cs);
+
+  // legend
+  var lg=mk("text",{x:14,y:H-14,"class":"glegend"}); lg.textContent="◦ cyan passive   ◦ magenta active or pivot"; svg.appendChild(lg);
+}
+
+function selectSource(name){
+  state.selected=name;
+  renderPanel();
+  if(state.view==="map") renderGraph(); else renderList();
+}
+
+function renderPanel(){
+  var src = sourcesFor(state.type).filter(function(x){return x.name===state.selected;})[0];
+  if(!src){ el("panelempty").style.display="block"; el("paneldata").style.display="none"; return; }
+  el("panelempty").style.display="none";
+  var d=el("paneldata"); d.style.display="block";
+  var link = buildLink(src.url, state.value);
+  var manual = src.url && src.url.indexOf("{{input}}")===-1;
+  var fav = isFav(state.type,src.name);
+  d.innerHTML =
+    '<div class="ph"><div class="nm">'+esc(src.name)+'</div>'+
+      '<div class="sub">'+esc(src.collection)+' &middot; '+esc(src.cost)+' &middot; '+esc(src.level)+' '+(manual?'&middot; manual entry':'')+'</div></div>'+
+    '<div class="pb">'+
+      '<span class="lab">What it tells you</span><p>'+esc(src.tells)+'</p>'+
+      '<span class="lab">Why use it</span><p class="why">'+esc(src.why)+'</p>'+
+      (src.pivot?('<span class="lab">Pivot</span><p class="pv"><b>&rarr;</b> '+esc(src.pivot)+'</p>'):'')+
+    '</div>'+
+    '<div class="pactions">'+
+      (link?('<button class="open" id="p-open">Open'+(manual?' site':'')+'</button>'):'<button class="open" disabled>No value</button>')+
+      (link?'<button id="p-copy">Copy link</button>':'')+
+      '<button id="p-fav">'+(fav?'&#9733; Pinned':'&#9734; Pin')+'</button>'+
+    '</div>';
+  if(link){
+    el("p-open").onclick=function(){ caseAddOpened(src,link); window.open(link,"_blank","noopener"); };
+    el("p-copy").onclick=function(){ copy(link, el("p-copy"), "Copy link"); };
+  }
+  el("p-fav").onclick=function(){ toggleFav(state.type,src.name); };
+}
+
+/* ---------------- FAVORITES + NOTES ---------------- */
+
+function toggleFav(type,name){
+  var k=favKey(type,name), i=favorites.indexOf(k);
+  if(i>-1) favorites.splice(i,1); else favorites.push(k);
+  memSet("olt_favorites",favorites);
+  renderFavorites(); renderPanel(); if(state.view==="map") renderGraph(); else renderList();
+}
+
+function renderFavorites(){
+  var body=el("favbody"); el("favcount").textContent=favorites.length?("("+favorites.length+")"):"";
+  if(!favorites.length){ body.innerHTML='<span class="muted-note">Star a source to pin it. Saved to this browser.</span>'; return; }
+  body.innerHTML="";
+  favorites.forEach(function(k){
+    var parts=k.split("::"), type=parts[0], name=parts[1];
+    var row=document.createElement("div"); row.className="fav";
+    row.innerHTML='<span>'+esc(name)+' <span class="muted-note">'+esc(INDICATORS[type]?INDICATORS[type].label:type)+'</span></span><span class="x">&times;</span>';
+    row.querySelector("span").onclick=function(){ if(state.type!==type){state.type=type; refreshAll(false);} selectSource(name); };
+    row.querySelector(".x").onclick=function(e){ e.stopPropagation(); toggleFav(type,name); };
+    body.appendChild(row);
+  });
+}
+
+function copy(text,btn,resetLabel){
+  function done(){ var old=btn.textContent; btn.textContent="Copied"; btn.classList.add("done"); setTimeout(function(){btn.textContent=resetLabel||old; btn.classList.remove("done");},1400); }
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done,function(){fallbackCopy(text);done();}); }
+  else { fallbackCopy(text); done(); }
+}
+function fallbackCopy(text){ var ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); }
+
+/* ---------------- PASTE-BACK EXTRACTION ---------------- */
+
+function extractIndicators(text){
+  var found=[], seen={};
+  function add(type,val){ var k=type+"|"+val.toLowerCase(); if(seen[k])return; seen[k]=1; found.push({type:type,value:val}); }
+  var t=" "+(text||"")+" ";
+  (t.match(/\bhttps?:\/\/[^\s<>"'\)\]]+/gi)||[]).forEach(function(u){ add("url", u.replace(/[.,)\]]+$/,"")); });
+  var t2=t.replace(/\bhttps?:\/\/[^\s<>"'\)\]]+/gi," ");
+  (t2.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g)||[]).forEach(function(e){ add("email",e); });
+  var t3=t2.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g," ");
+  (t3.match(/\b0x[a-fA-F0-9]{40}\b/g)||[]).forEach(function(c){ add("crypto",c); });
+  (t3.match(/\b(?:bc1|[13])[a-km-zA-HJ-NP-Z1-9]{25,59}\b/g)||[]).forEach(function(c){ add("crypto",c); });
+  (t3.match(/\b[a-fA-F0-9]{64}\b|\b[a-fA-F0-9]{40}\b|\b[a-fA-F0-9]{32}\b/g)||[]).forEach(function(h){ add("hash",h); });
+  (t3.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g)||[]).forEach(function(ip){ if(ip.split(".").every(function(o){return (+o)<=255;})) add("ip",ip); });
+  (t3.match(/\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}\b/g)||[]).forEach(function(d){
+    if(/^\d+(\.\d+)*$/.test(d)) return;
+    if(/\.(exe|dll|png|jpe?g|gif|pdf|txt|docx?|xlsx?|zip|rar|js|py|html?|css|json|csv|md)$/i.test(d)) return;
+    add("domain", d.toLowerCase());
+  });
+  return found;
+}
+
+function renderExtracted(found){
+  var box=el("extracted");
+  el("extractnote").textContent = found.length ? (found.length+" indicator"+(found.length>1?"s":"")+" found. Launch one, or add it to the case.") : "No indicators found in that text. Paste more, or add the value manually.";
+  if(!found.length){ box.className=""; box.innerHTML=""; return; }
+  box.className="on"; box.innerHTML="";
+  found.forEach(function(it){
+    var inCase = caseData.entities.some(function(e){return e.value.toLowerCase()===it.value.toLowerCase();});
+    var row=document.createElement("div"); row.className="exrow";
+    row.innerHTML='<span class="ty">'+esc(INDICATORS[it.type]?INDICATORS[it.type].label:it.type)+'</span>'+
+      '<span class="vl">'+esc(it.value)+'</span>'+
+      '<span class="go">investigate</span>'+
+      '<span class="add'+(inCase?' in':'')+'">'+(inCase?'in case':'+ case')+'</span>';
+    row.querySelector(".go").onclick=function(){ investigate(it.value); };
+    row.querySelector(".add").onclick=function(){ caseAddEntity(it.value,it.type); renderExtracted(found); };
+    box.appendChild(row);
+  });
+}
+
+function investigate(value){
+  el("q").value=value; state.value=value; state.type=detect(value); state.selected=null;
+  refreshAll(false);
+  window.scrollTo({top:0,behavior:"smooth"});
+  el("q").focus();
+}
+
+/* ---------------- CASE ---------------- */
+
+function caseAddEntity(value,type){
+  value=(value||"").trim(); if(!value) return;
+  if(caseData.entities.some(function(e){return e.value.toLowerCase()===value.toLowerCase();})) return;
+  caseData.entities.push({value:value,type:type||detect(value)});
+  memSet("olt_case",caseData); renderCase();
+}
+function caseRemoveEntity(value){
+  caseData.entities=caseData.entities.filter(function(e){return e.value.toLowerCase()!==value.toLowerCase();});
+  memSet("olt_case",caseData); renderCase();
+}
+function caseAddOpened(src,url){
+  if(caseData.opened.some(function(o){return o.name===src.name && o.type===state.type;})) return;
+  caseData.opened.push({name:src.name,type:state.type,url:url}); memSet("olt_case",caseData);
+}
+
+function renderCase(){
+  var body=el("casebody"); el("casecount").textContent=caseData.entities.length?("("+caseData.entities.length+")"):"";
+  if(!caseData.entities.length){ body.innerHTML='<span class="muted-note">Collect entities as you pivot. Add the current value, or pull them from a pasted AI answer above.</span>'; return; }
+  body.innerHTML="";
+  caseData.entities.forEach(function(e){
+    var row=document.createElement("div"); row.className="caseitem";
+    row.innerHTML='<span class="cv"><span class="cty">'+esc(INDICATORS[e.type]?INDICATORS[e.type].label:e.type)+'</span> '+esc(e.value)+'</span><span class="x">&times;</span>';
+    row.querySelector(".cv").onclick=function(){ investigate(e.value); };
+    row.querySelector(".x").onclick=function(ev){ ev.stopPropagation(); caseRemoveEntity(e.value); };
+    body.appendChild(row);
+  });
+}
+
+function exportCase(){
+  var lines=["# OSINT Case","","_Generated by OSINT Learning Tool. Runs offline; verify every finding._",""];
+  lines.push("## Entities collected ("+caseData.entities.length+")","");
+  if(caseData.entities.length) caseData.entities.forEach(function(e){ lines.push("- ["+(INDICATORS[e.type]?INDICATORS[e.type].label:e.type)+"] "+e.value); });
+  else lines.push("_None yet._");
+  lines.push("","## Sources opened ("+caseData.opened.length+")","");
+  if(caseData.opened.length) caseData.opened.forEach(function(o){ lines.push("- "+o.name+" ("+(INDICATORS[o.type]?INDICATORS[o.type].label:o.type)+"): "+(o.url||"")); });
+  else lines.push("_None yet._");
+  var notes=(el("notes").value||"").trim();
+  lines.push("","## Notes","", notes||"_None._","");
+  var blob=new Blob([lines.join("\n")],{type:"text/markdown"});
+  var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="osint-case.md"; a.click();
+}
+
+/* ---------------- TRADECRAFT + MODALS ---------------- */
+
+function renderTradecraft(){
+  var b=el("tradecraftbody"); b.innerHTML="";
+  TRADECRAFT.forEach(function(c){
+    var d=document.createElement("div"); d.className="concept";
+    d.innerHTML='<h4>'+esc(c.h)+'</h4><p>'+esc(c.p)+'</p>'+(c.scale?'<div class="scale">'+esc(c.scale)+'</div>':'');
+    b.appendChild(d);
+  });
+}
+function openModal(id){ el(id).classList.add("on"); }
+function closeModals(){ ["m-tradecraft","m-add","m-about"].forEach(function(id){ el(id).classList.remove("on"); }); }
+
+/* ---------------- WIRING ---------------- */
+
+function refreshAll(fromInput){
+  renderFrameAndDetect();
+  renderModes(); renderPrompt();
+  renderView();
+  if(!fromInput) { state.selected=null; renderPanel(); }
+  memSet("olt_lastType", state.type);
+}
+
+function onInput(){
+  var v=el("q").value;
+  state.value=v;
+  state.type=detect(v);
+  state.selected=null;
+  refreshAll(false);
+}
+
+function init(){
+  renderOverride();
+  el("q").addEventListener("input", onInput);
+  el("override").addEventListener("change", function(){ state.type=el("override").value; state.selected=null; refreshAll(false); });
+  el("v-map").onclick=function(){ state.view="map"; renderView(); };
+  el("v-list").onclick=function(){ state.view="list"; renderView(); };
+  el("copyprompt").onclick=function(){ copy(el("prompt").value, el("copyprompt"), "Copy"); };
+
+  el("nav-tradecraft").onclick=function(){ openModal("m-tradecraft"); };
+  el("nav-add").onclick=function(){ openModal("m-add"); };
+  el("nav-about").onclick=function(){ openModal("m-about"); };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-close]"),function(x){ x.onclick=closeModals; });
+  Array.prototype.forEach.call(document.querySelectorAll(".modal"),function(m){ m.onclick=function(e){ if(e.target===m) closeModals(); }; });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeModals(); });
+
+  el("a-save").onclick=function(){
+    var name=el("a-name").value.trim(), url=el("a-url").value.trim();
+    if(!name){ el("a-name").focus(); return; }
+    var obj=s(name,url||null, el("a-tells").value.trim()||"Custom source.", el("a-why").value.trim()||"Added by you.", null, el("a-coll").value, "free");
+    if(!customSources[state.type]) customSources[state.type]=[];
+    customSources[state.type].push(obj);
+    memSet("olt_custom",customSources);
+    ["a-name","a-url","a-tells","a-why"].forEach(function(id){ el(id).value=""; });
+    closeModals(); renderView();
+  };
+
+  // paste-back
+  el("extract").onclick=function(){ renderExtracted(extractIndicators(el("aiout").value)); };
+  // case
+  el("addcase").onclick=function(){ if(state.value.trim()) caseAddEntity(state.value, state.type); };
+  el("exportcase").onclick=exportCase;
+
+  // notes
+  var notes = memGet("olt_notes","");
+  el("notes").value = notes;
+  el("savenotes").onclick=function(){ memSet("olt_notes", el("notes").value); var b=el("savenotes"); b.textContent="Saved"; setTimeout(function(){b.textContent="Save";},1200); };
+
+  el("memstatus").textContent = MEM_OK ? "Memory on (this browser)." : "Memory off (private mode). Still fully usable.";
+
+  renderTradecraft();
+  renderCase();
+  renderFavorites();
+  // restore last type only if no value
+  var lt=memGet("olt_lastType",null); if(lt && INDICATORS[lt]) state.type=lt;
+  refreshAll(false);
+  el("q").focus();
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
