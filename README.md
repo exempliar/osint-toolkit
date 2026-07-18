@@ -25,13 +25,7 @@ What it gives you:
 - **A running Case.** Everything you collect is gathered into a case you can export to Markdown.
 - **Local memory.** Favorites, notes, and custom sources persist in the browser you open it in. Nothing is uploaded anywhere.
 
-### Use it live
-
-Open it directly in your browser, no download needed:
-
-**https://exempliar.github.io/osint-toolkit/OSINT-Learning-Tool.html**
-
-### Or run it locally
+### Run it locally
 
 1. Download [`OSINT-Learning-Tool.html`](OSINT-Learning-Tool.html) (on the file page, click the download / raw button and save it).
 2. Double-click the file. It opens in your default browser and runs fully offline.
