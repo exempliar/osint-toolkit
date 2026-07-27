@@ -64,6 +64,8 @@
   .badge{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border:1px solid var(--line2);color:var(--dim);white-space:nowrap}
   .badge.live{color:var(--green);border-color:#2f5c37}
   .badge.planned{color:var(--amber);border-color:#5c4a1f}
+  .badge.net{color:var(--mag);border-color:var(--magdim)}
+  .badges{display:flex;gap:6px;flex-wrap:wrap}
 
   .planned-list{display:grid;gap:9px;margin-bottom:36px}
   .planned-item{border:1px dashed var(--line2);padding:11px 14px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
@@ -92,8 +94,8 @@
     </nav>
   </header>
 
-  <p class="lede">Self-contained tools for open source intelligence work. Every tool is a single HTML file: open it by double-click, it runs offline, and nothing you type ever leaves the page.</p>
-  <p class="sub">The goal is not just to automate lookups. It is to teach the method behind them, so you get faster and sharper at the actual work.</p>
+  <p class="lede">Self-contained tools for open source intelligence work. Every tool is a single HTML file you download and open by double-click. Nothing you enter ever leaves the page &mdash; no backend, no accounts, no telemetry.</p>
+  <p class="sub">The goal is not just to automate lookups. It is to teach the method behind them, so you get faster and sharper at the actual work. Most tools here need no network at all; the one that loads a library is marked.</p>
 
   <p class="section-label">Tools</p>
   <div class="tools">
@@ -101,11 +103,31 @@
     <a class="tool" href="tools/OSINT-Learning-Tool.html">
       <div class="row">
         <h2>OSINT Learning Tool</h2>
-        <span class="badge live">Live</span>
+        <span class="badges"><span class="badge live">Live</span></span>
       </div>
       <span class="file mono">tools/OSINT-Learning-Tool.html</span>
       <p>Teaching-first pivot console. Type any indicator &mdash; IP, domain, URL, email, username, hash, crypto wallet, person, phone, company, image, or topic &mdash; and it names what the indicator is, frames what you are actually trying to learn, and maps the sources worth checking with the reasoning behind each. Generates model-agnostic AI prompts in Learn, Pivot, Verify, and Report modes, extracts new indicators from pasted-back answers as clickable pivots, and builds a running case you can view as a node map and export to Markdown.</p>
       <p class="teaches"><b>Teaches</b> &nbsp;where to look and why, passive vs. active sources, and how one indicator turns into the next.</p>
+    </a>
+
+    <a class="tool" href="tools/SONAR-OSINT-Cockpit.html">
+      <div class="row">
+        <h2>SONAR &mdash; Image OSINT Cockpit</h2>
+        <span class="badges"><span class="badge live">Live</span><span class="badge net">Loads a library</span></span>
+      </div>
+      <span class="file mono">tools/SONAR-OSINT-Cockpit.html</span>
+      <p>Everything-from-a-picture cockpit. Drop an image and it pulls EXIF metadata and runs OCR on any text in the frame, then gives you a copy-to-AI prompt tuned to what you are trying to establish. Paste the answer back to reconcile claims against the metadata and pivot on what survives. Covers geolocation, transport and vehicle visuals, and photographed documents.</p>
+      <p class="teaches"><b>Teaches</b> &nbsp;what metadata does and does not prove, and how to reconcile a confident AI reading against the evidence in the file.</p>
+    </a>
+
+    <a class="tool" href="tools/MANIFEST-Records-Cockpit.html">
+      <div class="row">
+        <h2>MANIFEST &mdash; Records Cockpit</h2>
+        <span class="badges"><span class="badge live">Live</span></span>
+      </div>
+      <span class="file mono">tools/MANIFEST-Records-Cockpit.html</span>
+      <p>The non-image companion to SONAR. Pick an entity type &mdash; person, company, vessel, aircraft, domain and infrastructure, username, military, or historical &mdash; drop in your selector, and it builds targeted lookups that inject the selector straight into the right registries and trackers. Comes with a research prompt tuned per entity type, suggested first moves, and a findings log.</p>
+      <p class="teaches"><b>Teaches</b> &nbsp;which registry actually answers which question, and the order to work an entity in so early findings narrow the later ones.</p>
     </a>
 
   </div>
@@ -120,8 +142,9 @@
   <div class="note">
     <b>Privacy and use.</b>
     <ul>
-      <li>Every tool here is a static HTML file. No backend, no network calls of its own, no accounts.</li>
-      <li>What you type stays in your browser. Favorites, notes, and cases use local browser storage.</li>
+      <li>Every tool here is a static HTML file. No backend, no accounts, no telemetry.</li>
+      <li>What you type stays in your browser. Favorites, notes, and cases use local browser storage, and nothing you enter is transmitted anywhere.</li>
+      <li>The Learning Tool and MANIFEST make no network requests at all. SONAR is the one exception: it loads two open-source libraries (EXIF parsing and OCR) from a public CDN when you open it, so it needs a connection on first load. Both run inside your browser &mdash; your images are never uploaded &mdash; and SONAR says so plainly if they fail to load.</li>
       <li>AI prompts are copy-and-paste on purpose, so the tools stay model-agnostic and you control what goes to any AI.</li>
       <li>Use these only against targets you are authorized to investigate, and follow the terms of service of the sources you visit.</li>
     </ul>

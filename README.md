@@ -1,6 +1,6 @@
 # OSINT Toolkit
 
-Self-contained, teaching-first tools for open source intelligence work. Every tool is a single HTML file: open it by double-click, it runs offline, and nothing you type ever leaves the page.
+Self-contained, teaching-first tools for open source intelligence work. Every tool is a single HTML file you download and open by double-click. Nothing you enter ever leaves the page — no backend, no accounts, no telemetry.
 
 The goal is not just to automate lookups. It is to teach the method behind them, so you get faster and sharper at the actual work.
 
@@ -9,6 +9,8 @@ The goal is not just to automate lookups. It is to teach the method behind them,
 | Tool | File | What it does |
 |------|------|--------------|
 | OSINT Learning Tool | [`tools/OSINT-Learning-Tool.html`](tools/OSINT-Learning-Tool.html) | Teaching-first pivot console. Type any indicator, learn where to look and why, get a model-agnostic AI prompt, paste findings back to extract pivots, and build an exportable case you can view as a node map. |
+| SONAR — Image OSINT Cockpit | [`tools/SONAR-OSINT-Cockpit.html`](tools/SONAR-OSINT-Cockpit.html) | Everything-from-a-picture cockpit. Drop an image, pull EXIF and OCR, copy a prompt to your AI, paste back to reconcile and pivot. Geolocation, transport visuals, and documents. |
+| MANIFEST — Records Cockpit | [`tools/MANIFEST-Records-Cockpit.html`](tools/MANIFEST-Records-Cockpit.html) | The non-image companion to SONAR. Pick an entity type, drop the selector, and get targeted registry and tracker lookups, a prompt tuned per type, first moves, and a findings log. |
 
 More tools will land here over time. See the [roadmap](#roadmap).
 
@@ -62,14 +64,45 @@ What it gives you:
 6. **Click a pivot** to start the loop again on the new lead. The Case grows as you go.
 7. **Switch the Case to map view** to see the chain of pivots as a node graph, and **export to Markdown** when you are done.
 
-### Privacy and safety
+## SONAR — Image OSINT Cockpit
 
-- The tool is a single static HTML file. It makes no network calls of its own and has no backend.
-- Anything you type stays in your browser. Favorites and notes use local browser storage, which never leaves your machine.
-- Prompts are copy and paste on purpose, so the tool stays model-agnostic and you stay in control of what goes to any AI.
+Everything you can get from a picture, in one place. Drop an image and SONAR pulls the EXIF metadata and runs OCR over any text in the frame, then hands you a copy-to-AI prompt tuned to what you are trying to establish. Paste the answer back to reconcile the model's claims against what the file actually says, and pivot on whatever survives.
+
+Built for image work in three directions: geolocation, transport and vehicle visuals, and photographed documents.
+
+**Teaches** what metadata does and does not prove, and how to pressure-test a confident AI reading against the evidence in the file.
+
+### One thing to know before you use it
+
+SONAR is the only tool here that needs a network connection. It loads two open-source libraries when you open it — [`exifr`](https://github.com/MikeKovarik/exifr) for EXIF parsing and [`tesseract.js`](https://github.com/naptha/tesseract.js) for OCR — from a public CDN, because bundling Tesseract's OCR language data into a single file would push it into the megabytes.
+
+What this means in practice:
+
+- **Your images are never uploaded.** Both libraries run inside your browser. No image, and nothing you type, is transmitted anywhere.
+- **You need a connection on first load** for EXIF and OCR to work. Offline, the rest of the tool still opens and it tells you plainly that the libraries did not load, rather than failing silently.
+- **The CDN sees a request** from your IP for two very common open-source libraries, as it would for any of the thousands of ordinary sites that use them.
+
+## MANIFEST — Records Cockpit
+
+The non-image companion to SONAR, for the recon, company, vessel, and infrastructure work that image tooling does not touch.
+
+Pick an entity type — person, company, vessel, aircraft, domain and infrastructure, username, military, or historical — drop in your selector, and MANIFEST builds targeted lookups that inject the selector straight into the right registries and trackers. Each entity type comes with a research prompt tuned to it, a set of suggested first moves, and a findings log.
+
+**Teaches** which registry actually answers which question, and what order to work an entity in so early findings narrow the later ones.
+
+MANIFEST makes no network requests of its own. Every lookup is a link you choose to open.
+
+## Privacy and safety
+
+Applies to every tool in this repo:
+
+- Each tool is a single static HTML file with no backend, no accounts, and no telemetry.
+- Anything you type stays in your browser. Favorites, notes, findings, and cases use local browser storage, which never leaves your machine, and none of it is written back into the HTML file.
+- Prompts are copy and paste on purpose, so the tools stay model-agnostic and you stay in control of what goes to any AI.
 - Passive vs active sources are labeled so you can avoid tipping off a target when that matters.
+- The Learning Tool and MANIFEST make no network requests at all. SONAR loads two libraries from a CDN, as described above.
 
-Use it only against targets you are authorized to investigate, and follow the terms of service of the sources you visit.
+Use these only against targets you are authorized to investigate, and follow the terms of service of the sources you visit.
 
 ## Roadmap
 

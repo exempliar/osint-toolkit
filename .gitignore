@@ -1,3 +1,17 @@
+# Investigation output — never commit case data
+# These tools export findings to disk. If an export lands in this folder,
+# it must not be committed: case files contain names, usernames, and
+# search history from real lookups.
+osint-case.md
+*-case.md
+*.case.md
+*-findings.md
+*-export.md
+cases/
+exports/
+output/
+findings/
+
 # OS cruft
 .DS_Store
 Thumbs.db

@@ -11,9 +11,11 @@ A tool that returns an answer is half a tool. A tool that shows *why* that is th
 ## House style
 
 - **One self-contained file per tool.** All HTML, CSS, and JavaScript in a single `.html` file under `tools/`.
-- **Offline first.** No network calls of its own, no backend, no accounts, no telemetry. A user should be able to download the one file, pull the ethernet cable, and still have it work.
+- **Offline first.** No backend, no accounts, no telemetry. A user should be able to download the one file, pull the ethernet cable, and still have it work.
 - **No build step.** No bundler, no package.json, no transpile. What is in the repo is what runs.
-- **No external dependencies.** No CDN scripts, no remote fonts, no remote images. Vendor anything you truly need directly into the file.
+- **No external dependencies,** with one narrow exception. No CDN scripts, no remote fonts, no remote images. Vendor anything you truly need directly into the file.
+
+  The exception is a library that is genuinely too large to inline — SONAR loads Tesseract for OCR, whose language data runs to megabytes. If you take it, you owe the user three things: the feature must **degrade gracefully** and say so when the library fails to load, no user data may be transmitted (the library runs client-side, it does not send anything out), and the dependency must be **stated plainly** in the README and marked on the tool's card in `index.html`. A tool that quietly needs the network is not acceptable; one that says so is.
 - **Local storage only.** Persistence via `localStorage` is fine and encouraged. Anything that leaves the machine is not.
 - **Model-agnostic AI.** Do not call an AI API. Generate a prompt the user copies into whatever model they use, and give them a way to paste the answer back. This keeps the tool free, offline, and neutral.
 

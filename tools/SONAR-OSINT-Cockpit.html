@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SONAR — OSINT cockpit for DIVER CTF</title>
+<script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  :root{
+    --bg:#0a1119; --bg-2:#0c1620; --panel:#0f1c28; --panel-2:#122534;
+    --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
+    --text:#e7eef3; --muted:#8ba1af; --faint:#5c7382;
+    --accent:#35e0c4; --accent-dim:rgba(53,224,196,.14);
+    --claude:#e8975c; --gpt:#54d38a;
+    --radius:12px;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans); color:var(--text); background:var(--bg);
+    background-image:radial-gradient(1200px 420px at 78% -8%, rgba(53,224,196,.09), transparent 60%),
+                     radial-gradient(900px 380px at 12% -12%, rgba(80,140,200,.08), transparent 55%);
+    background-attachment:fixed; line-height:1.5; font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);text-decoration:none}
+  ::selection{background:rgba(53,224,196,.3)}
+
+  /* top bar */
+  .topbar{
+    display:flex; align-items:center; gap:22px; padding:16px 26px;
+    border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20;
+    backdrop-filter:blur(10px); background:rgba(10,17,25,.72);
+  }
+  .brand{display:flex; align-items:center; gap:12px}
+  .brand svg{display:block}
+  .brand .name{font-weight:700; letter-spacing:.16em; font-size:15px}
+  .brand .tag{color:var(--faint); font-size:11.5px; letter-spacing:.05em; border-left:1px solid var(--line-2); padding-left:12px}
+  .spacer{flex:1}
+  .seg{display:flex; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:3px; gap:2px}
+  .seg button{
+    font:inherit; font-size:12.5px; color:var(--muted); background:transparent; border:0;
+    padding:6px 13px; border-radius:7px; cursor:pointer; letter-spacing:.02em; transition:.15s;
+  }
+  .seg button:hover{color:var(--text)}
+  .seg button.on{background:var(--accent-dim); color:var(--accent)}
+
+  /* layout */
+  .wrap{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr); gap:20px; padding:22px 26px; max-width:1400px; margin:0 auto}
+  @media (max-width:940px){ .wrap{grid-template-columns:1fr} .seg{display:none} }
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px 18px 19px}
+  .card + .card{margin-top:18px}
+  .eyebrow{font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); font-weight:600; margin:0 0 12px}
+  .eyebrow .n{color:var(--accent); margin-right:8px}
+  h2{margin:0}
+
+  /* dropzone */
+  .drop{
+    border:1.5px dashed var(--line-2); border-radius:11px; padding:30px 20px; text-align:center;
+    color:var(--muted); cursor:pointer; transition:.18s; background:var(--bg-2);
+  }
+  .drop:hover{border-color:var(--accent); color:var(--text)}
+  .drop.hot{border-color:var(--accent); background:var(--accent-dim); color:var(--text)}
+  .drop b{color:var(--text); font-weight:600}
+  .drop small{display:block; margin-top:6px; color:var(--faint); font-size:12px}
+  .preview{display:none; gap:16px; align-items:flex-start}
+  .preview.show{display:flex}
+  .preview img{max-width:230px; max-height:200px; border-radius:9px; border:1px solid var(--line-2); display:block}
+  .preview .meta{flex:1; min-width:0}
+  .preview .fname{font-family:var(--mono); font-size:12.5px; color:var(--text); word-break:break-all}
+  .preview .dims{color:var(--faint); font-size:12px; margin-top:3px}
+
+  .btnrow{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+  button.act, a.act{
+    font:inherit; font-size:12.5px; font-weight:500; cursor:pointer; border-radius:8px;
+    padding:8px 13px; border:1px solid var(--line-2); background:var(--panel-2); color:var(--text);
+    transition:.15s; display:inline-flex; align-items:center; gap:7px; text-decoration:none; white-space:nowrap;
+  }
+  button.act:hover, a.act:hover{border-color:var(--accent); color:var(--accent)}
+  button.primary{background:var(--accent); color:#04231d; border-color:var(--accent); font-weight:650}
+  button.primary:hover{filter:brightness(1.08); color:#04231d}
+  button.act:disabled{opacity:.4; cursor:not-allowed}
+  button.ghost{background:transparent}
+
+  /* signals */
+  .kv{display:grid; grid-template-columns:auto 1fr; gap:4px 16px; font-family:var(--mono); font-size:12.5px; margin-top:4px}
+  .kv dt{color:var(--faint)}
+  .kv dd{margin:0; color:var(--text); word-break:break-word}
+  .hint{color:var(--faint); font-size:12px; margin-top:10px}
+  .langs{display:flex; flex-wrap:wrap; gap:6px 14px; margin:12px 0 4px; font-size:12.5px; color:var(--muted)}
+  .langs label{display:inline-flex; align-items:center; gap:6px; cursor:pointer}
+  .ocrout{font-family:var(--mono); font-size:12.5px; white-space:pre-wrap; background:var(--bg-2); border:1px solid var(--line);
+    border-radius:8px; padding:11px 12px; margin-top:12px; max-height:190px; overflow:auto; color:#cfe0e6; display:none}
+  .ocrout.show{display:block}
+  .bar{height:3px; background:var(--line); border-radius:3px; overflow:hidden; margin-top:10px; display:none}
+  .bar.show{display:block}
+  .bar i{display:block; height:100%; width:0; background:var(--accent); transition:width .2s}
+
+  /* prompt */
+  .promptbox{font-family:var(--mono); font-size:12px; white-space:pre-wrap; background:var(--bg-2); border:1px solid var(--line);
+    border-radius:8px; padding:12px 13px; color:#c6d7dd; max-height:220px; overflow:auto}
+
+  /* reconcile */
+  .answers{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media (max-width:560px){ .answers{grid-template-columns:1fr} }
+  .answers .field label{font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; font-weight:600; display:flex; align-items:center; gap:7px; margin-bottom:6px}
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block}
+  .dot.claude{background:var(--claude)} .dot.gpt{background:var(--gpt)}
+  textarea{
+    width:100%; min-height:120px; resize:vertical; font-family:var(--mono); font-size:12.5px;
+    background:var(--bg-2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:11px 12px;
+  }
+  textarea:focus{outline:none; border-color:var(--accent)}
+  textarea.claude:focus{border-color:var(--claude)} textarea.gpt:focus{border-color:var(--gpt)}
+
+  /* recommendations */
+  .rec-empty{color:var(--faint); font-size:13px}
+  .lead{background:var(--bg-2); border:1px solid var(--line); border-left:2px solid var(--accent); border-radius:8px; padding:11px 13px; margin-bottom:10px}
+  .lead .src{font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); font-weight:600}
+  .lead .txt{font-size:13px; margin-top:3px; color:var(--text)}
+  .recgroup{margin-top:16px}
+  .recgroup h4{font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint); margin:0 0 9px; font-weight:600}
+  .chips{display:flex; flex-wrap:wrap; gap:7px}
+  .chip{font-size:12px; padding:5px 11px; border-radius:7px; border:1px solid var(--line-2); background:var(--panel-2); color:var(--text);
+    display:inline-flex; gap:7px; align-items:center; cursor:pointer; text-decoration:none}
+  .chip:hover{border-color:var(--accent); color:var(--accent)}
+  .chip .k{color:var(--faint); font-size:11px}
+  .agree{border-left-color:var(--gpt)}
+  .tagtwo{color:var(--accent)} .tagone{color:var(--muted)}
+  .badge{font-size:10px; padding:2px 7px; border-radius:20px; border:1px solid var(--line-2); color:var(--muted)}
+  .badge.both{color:var(--accent); border-color:rgba(53,224,196,.4)}
+
+  /* right rail */
+  .tabs{display:flex; gap:4px; border:1px solid var(--line); background:var(--panel); border-radius:10px; padding:3px; margin-bottom:16px}
+  .tabs button{flex:1; font:inherit; font-size:12.5px; color:var(--muted); background:transparent; border:0; padding:7px; border-radius:7px; cursor:pointer}
+  .tabs button.on{background:var(--accent-dim); color:var(--accent)}
+  .pane{display:none} .pane.on{display:block}
+
+  .search{display:flex; gap:8px; margin-bottom:14px}
+  .search input{flex:1; font:inherit; font-size:13px; background:var(--bg-2); border:1px solid var(--line); border-radius:8px; padding:9px 11px; color:var(--text)}
+  .search input:focus{outline:none; border-color:var(--accent)}
+
+  .linkgroup{margin-bottom:16px}
+  .linkgroup h4{font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint); margin:0 0 9px; font-weight:600}
+  .linkgroup .chips a{cursor:pointer}
+
+  /* playbook */
+  .pb{font-size:13px; color:#cddbe1}
+  .pb h4{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); margin:18px 0 8px; font-weight:600}
+  .pb h4:first-child{margin-top:2px}
+  .pb ul{margin:0; padding-left:18px} .pb li{margin:4px 0}
+  .pb table{width:100%; border-collapse:collapse; margin-top:6px; font-size:12.5px}
+  .pb td{border-top:1px solid var(--line); padding:6px 8px; vertical-align:top}
+  .pb td:first-child{color:var(--muted); white-space:nowrap; width:38%}
+
+  .notes textarea{min-height:150px}
+  .toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel-2);
+    border:1px solid var(--accent); color:var(--text); padding:10px 18px; border-radius:9px; font-size:13px; opacity:0;
+    transition:.25s; pointer-events:none; z-index:50}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .foot{color:var(--faint); font-size:11.5px; text-align:center; padding:8px 26px 30px}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="13" stroke="#35e0c4" stroke-width="1.5" opacity=".35"/>
+      <circle cx="16" cy="16" r="8.5" stroke="#35e0c4" stroke-width="1.5" opacity=".6"/>
+      <circle cx="16" cy="16" r="2.4" fill="#35e0c4"/>
+      <path d="M16 16 L27 7" stroke="#35e0c4" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <span class="name">SONAR</span>
+    <span class="tag">OSINT cockpit · DIVER CTF</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="seg" id="seg">
+    <button data-cat="geo" class="on">Geolocation</button>
+    <button data-cat="transport">Transport</button>
+    <button data-cat="document">Document</button>
+    <button data-cat="general">General</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: pipeline -->
+  <section>
+    <!-- 1. intake -->
+    <div class="card">
+      <p class="eyebrow"><span class="n">01</span>Drop the challenge image</p>
+      <div class="drop" id="drop">
+        <b>Drop an image here</b> or click to browse
+        <small>Everything runs in your browser. Nothing is uploaded anywhere.</small>
+      </div>
+      <input type="file" id="file" accept="image/*" hidden />
+      <div class="preview" id="preview">
+        <img id="pimg" alt="challenge" />
+        <div class="meta">
+          <div class="fname" id="fname"></div>
+          <div class="dims" id="dims"></div>
+          <div class="btnrow">
+            <button class="act primary" id="analyze">Analyze</button>
+            <button class="act" id="copyimg">Copy image</button>
+            <button class="act ghost" id="clear">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. signals -->
+    <div class="card" id="signalsCard" style="display:none">
+      <p class="eyebrow"><span class="n">02</span>Local signals</p>
+      <dl class="kv" id="exif"></dl>
+      <div class="langs" id="langs">
+        <span style="color:var(--faint)">OCR languages:</span>
+        <label><input type="checkbox" value="eng" checked> English</label>
+        <label><input type="checkbox" value="rus"> Russian</label>
+        <label><input type="checkbox" value="jpn"> Japanese</label>
+        <label><input type="checkbox" value="chi_sim"> Chinese</label>
+        <label><input type="checkbox" value="kor"> Korean</label>
+        <label><input type="checkbox" value="ara"> Arabic</label>
+      </div>
+      <div class="btnrow">
+        <button class="act" id="ocrbtn">Read text (OCR)</button>
+        <span class="hint" id="ocrhint" style="margin-top:0; align-self:center">First run downloads the language data, give it a moment.</span>
+      </div>
+      <div class="bar" id="ocrbar"><i></i></div>
+      <div class="ocrout" id="ocrout"></div>
+    </div>
+
+    <!-- 3. ask models -->
+    <div class="card">
+      <p class="eyebrow"><span class="n">03</span>Ask Claude &amp; ChatGPT</p>
+      <div class="btnrow" style="margin-top:0; margin-bottom:13px">
+        <button class="act primary" id="copyprompt">Copy prompt</button>
+        <button class="act" id="copyimg2">Copy image</button>
+        <a class="act" href="https://claude.ai/new" target="_blank" rel="noopener">Open Claude ↗</a>
+        <a class="act" href="https://chatgpt.com/" target="_blank" rel="noopener">Open ChatGPT ↗</a>
+      </div>
+      <div class="promptbox" id="promptbox"></div>
+      <p class="hint">Paste the prompt into each app, attach the image, send. Then bring both answers back to step 04.</p>
+    </div>
+
+    <!-- 4. reconcile -->
+    <div class="card">
+      <p class="eyebrow"><span class="n">04</span>Paste the answers back</p>
+      <div class="answers">
+        <div class="field">
+          <label><span class="dot claude"></span> Claude said</label>
+          <textarea class="claude" id="ansA" placeholder="Paste Claude's full reply here"></textarea>
+        </div>
+        <div class="field">
+          <label><span class="dot gpt"></span> ChatGPT said</label>
+          <textarea class="gpt" id="ansB" placeholder="Paste ChatGPT's full reply here"></textarea>
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="act primary" id="compare">Compare &amp; recommend</button>
+        <button class="act ghost" id="clearans">Clear</button>
+      </div>
+    </div>
+
+    <!-- 5. recommendations -->
+    <div class="card">
+      <p class="eyebrow"><span class="n">05</span>Where to look next</p>
+      <div id="rec"><p class="rec-empty">Compare the two answers and this fills with the top leads, where the models agree, and one-click pivots for every place, coordinate, registration, or handle they surfaced.</p></div>
+    </div>
+  </section>
+
+  <!-- RIGHT: reference -->
+  <aside>
+    <div class="tabs" id="tabs">
+      <button data-pane="pivots" class="on">Pivots</button>
+      <button data-pane="playbook">Playbook</button>
+      <button data-pane="notes">Notes</button>
+    </div>
+
+    <!-- pivots -->
+    <div class="pane on" id="pane-pivots">
+      <div class="card">
+        <div class="search">
+          <input id="q" placeholder="Search a place, name, term…" />
+          <button class="act primary" id="qgo">Go</button>
+        </div>
+        <div id="quicklinks"></div>
+      </div>
+    </div>
+
+    <!-- playbook -->
+    <div class="pane" id="pane-playbook">
+      <div class="card pb" id="playbook"></div>
+    </div>
+
+    <!-- notes -->
+    <div class="pane" id="pane-notes">
+      <div class="card notes">
+        <p class="eyebrow">Case notes</p>
+        <div class="search" style="margin-bottom:12px">
+          <input id="challName" placeholder="Challenge name" />
+        </div>
+        <textarea id="notes" placeholder="Working notes, coordinates, candidate answers…"></textarea>
+        <div class="btnrow">
+          <button class="act primary" id="copyDiscord">Copy for Discord</button>
+          <button class="act ghost" id="clearNotes">Clear</button>
+        </div>
+        <p class="hint">Copies a tidy summary (challenge, notes, and detected leads) ready to paste into your team channel.</p>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="foot">SONAR runs entirely in your browser · no server, no accounts, no data leaves your machine · share the file, coordinate in Discord</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- state ---------------- */
+let currentFile=null, currentImg=null, currentCanvas=null, category="geo";
+let lastEntities=[];
+
+/* ---------------- prompts ---------------- */
+const PROMPTS={
+geo:`You are an elite OSINT geolocation analyst (top-tier GeoGuessr plus investigative journalist). I'll give you a CTF challenge image. Work out exactly where it was taken.
+
+Reason from concrete evidence, not vibes:
+- Hemisphere/climate: vegetation, sun position + shadow direction, weather.
+- Country tells: which side of the road they drive on; license-plate shape/colour/format; road-line colours and markings; bollards, guardrails, utility/power-pole styles; signage language and script.
+- Text: transcribe EVERY piece of visible text exactly, then translate to English. Note phone-number formats and domains (.ru, .jp…).
+- Built environment: architecture, materials, shop brands, street furniture, numbering.
+- Landmarks: any identifiable building, mountain, coastline, sign, or logo.
+
+Give a RANKED list of the most likely locations, country → region → city → tightest specific spot you can justify, each with a confidence (high/med/low) and the exact evidence.
+
+End with exactly two lines:
+NEXT: <the single best lead and the exact search query or site to try>
+ENTITIES: <semicolon-separated key=value using only these keys where found: country, city, place, coords, what3words, street, landmark, language>`,
+
+transport:`You are an aviation/rail/maritime OSINT identification expert. Identify the vehicle and, if possible, the exact service, from this CTF image.
+
+Work the evidence:
+- Aircraft: airline livery/logo, type/model (winglets, engines, doors), visible registration or tail number, titles.
+- Train: operator livery, line/route, car type, station signage, platform numbers.
+- Ship: hull name, funnel markings, type, port clues.
+- Environment: airport/station/port identifiers, signage language, time of day.
+
+Give a ranked identification with confidence and the evidence, and if you can, the specific route/flight/date to check.
+
+End with exactly two lines:
+NEXT: <the single best lookup and the exact site + query, e.g. FlightRadar24 filtered to reg XX-YYY on 2025-03-11>
+ENTITIES: <semicolon-separated key=value using only these keys where found: aircraft_reg, callsign, flight, airport, operator, ship, station, country, language>`,
+
+document:`You are a document and metadata OSINT analyst. Examine this CTF image/document for every extractable clue.
+
+Look for:
+- All visible text, transcribed and translated: headers, stamps, watermarks, handwriting, fine print.
+- Language, script, date formats, and any place or organisation names.
+- Formatting tells: letterhead, fonts, seals, reference numbers, redactions.
+- Anything hinting at origin, author, date, or the device/software that made it.
+
+Summarise what the document is and who/where/when it likely comes from, with leads.
+
+End with exactly two lines:
+NEXT: <the single best thing to search or verify and how>
+ENTITIES: <semicolon-separated key=value using only these keys where found: org, person, place, country, date, url, reference, language>`,
+
+general:`You are a broad OSINT analyst. Pull every useful lead from this CTF image: what it shows, all text (transcribed + translated), people/places/objects/brands, and anything identifying. Give ranked hypotheses with evidence and confidence.
+
+End with exactly two lines:
+NEXT: <the best next step and exact query/site>
+ENTITIES: <semicolon-separated key=value using keys where found: place, city, country, coords, person, org, url, language>`
+};
+
+/* ---------------- helpers ---------------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),1600);}
+function copyText(str,label){
+  const done=()=>toast((label||"Copied")+" ✓");
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(str).then(done).catch(()=>fb());}else fb();
+  function fb(){const ta=document.createElement("textarea");ta.value=str;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");done();}catch(e){toast("Copy failed — select manually");}ta.remove();}
+}
+const enc=encodeURIComponent;
+function open_(u){window.open(u,"_blank","noopener");}
+
+/* ---------------- intake ---------------- */
+const drop=$("#drop"), fileIn=$("#file");
+drop.addEventListener("click",()=>fileIn.click());
+drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("hot");});
+drop.addEventListener("dragleave",()=>drop.classList.remove("hot"));
+drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("hot");if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+fileIn.addEventListener("change",e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+document.addEventListener("paste",e=>{const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith("image/"));if(it)loadFile(it.getAsFile());});
+
+function loadFile(f){
+  currentFile=f;
+  const url=URL.createObjectURL(f);
+  const img=new Image();
+  img.onload=()=>{
+    currentImg=img;
+    const c=document.createElement("canvas");c.width=img.naturalWidth;c.height=img.naturalHeight;
+    c.getContext("2d").drawImage(img,0,0);currentCanvas=c;
+    $("#pimg").src=url;
+    $("#fname").textContent=f.name||"pasted-image.png";
+    $("#dims").textContent=`${img.naturalWidth}×${img.naturalHeight}px · ${(f.size/1024).toFixed(0)} KB`;
+    $("#preview").classList.add("show");
+    drop.style.display="none";
+  };
+  img.src=url;
+}
+$("#clear").addEventListener("click",()=>{
+  currentFile=currentImg=currentCanvas=null;
+  $("#preview").classList.remove("show");drop.style.display="";
+  $("#signalsCard").style.display="none";$("#ocrout").classList.remove("show");
+});
+
+/* ---------------- analyze / EXIF ---------------- */
+$("#analyze").addEventListener("click",runAnalyze);
+async function runAnalyze(){
+  if(!currentFile)return;
+  $("#signalsCard").style.display="";
+  const dl=$("#exif");dl.innerHTML="";
+  const row=(k,v)=>{const dt=document.createElement("dt");dt.textContent=k;const dd=document.createElement("dd");if(v instanceof Node)dd.appendChild(v);else dd.textContent=v;dl.append(dt,dd);};
+  if(typeof exifr==="undefined"){row("Metadata","library didn't load — check your connection");return;}
+  let d={};try{d=await exifr.parse(currentFile,{gps:true,tiff:true,exif:true,ifd0:true})||{};}catch(e){d={};}
+  const has=Object.keys(d).length;
+  if(d.latitude&&d.longitude){
+    const a=document.createElement("a");a.href=`https://www.google.com/maps/search/?api=1&query=${d.latitude},${d.longitude}`;a.target="_blank";a.rel="noopener";
+    a.textContent=`${d.latitude.toFixed(6)}, ${d.longitude.toFixed(6)} — open in Maps ↗`;
+    row("GPS",a);
+  }
+  if(d.DateTimeOriginal)row("Taken",new Date(d.DateTimeOriginal).toLocaleString());
+  if(d.Make||d.Model)row("Camera",[d.Make,d.Model].filter(Boolean).join(" "));
+  if(d.Software)row("Software",d.Software);
+  if(d.Orientation)row("Orientation",String(d.Orientation));
+  if(!d.latitude&&!d.DateTimeOriginal&&!d.Make&&!d.Software){
+    row("Metadata",has?"present but no GPS/camera/date":"none found (common — geo challenges are usually scrubbed; the visual clues are the game)");
+  }
+}
+
+/* ---------------- OCR ---------------- */
+$("#ocrbtn").addEventListener("click",runOCR);
+async function runOCR(){
+  if(!currentFile){toast("Drop an image first");return;}
+  if(typeof Tesseract==="undefined"){toast("OCR library didn't load");return;}
+  const langs=$$("#langs input:checked").map(c=>c.value);
+  if(!langs.length){toast("Pick at least one language");return;}
+  const bar=$("#ocrbar"),fill=bar.querySelector("i"),out=$("#ocrout"),btn=$("#ocrbtn");
+  bar.classList.add("show");fill.style.width="4%";btn.disabled=true;btn.textContent="Reading…";
+  out.classList.remove("show");
+  try{
+    const {data}=await Tesseract.recognize(currentFile,langs.join("+"),{logger:m=>{if(m.status==="recognizing text")fill.style.width=Math.max(4,m.progress*100)+"%";}});
+    out.textContent=(data.text||"").trim()||"(no text detected)";
+    out.classList.add("show");
+  }catch(e){out.textContent="OCR failed: "+e.message;out.classList.add("show");}
+  bar.classList.remove("show");fill.style.width="0";btn.disabled=false;btn.textContent="Read text (OCR)";
+}
+
+/* ---------------- copy image ---------------- */
+async function copyImage(){
+  if(!currentCanvas){toast("Drop an image first");return;}
+  try{
+    const blob=await new Promise(r=>currentCanvas.toBlob(r,"image/png"));
+    await navigator.clipboard.write([new ClipboardItem({"image/png":blob})]);
+    toast("Image copied — paste into the app ✓");
+  }catch(e){toast("Copy blocked here — drag the image in instead");}
+}
+$("#copyimg").addEventListener("click",copyImage);
+$("#copyimg2").addEventListener("click",copyImage);
+
+/* ---------------- category + prompt ---------------- */
+function setCat(c){
+  category=c;
+  $$("#seg button").forEach(b=>b.classList.toggle("on",b.dataset.cat===c));
+  $("#promptbox").textContent=PROMPTS[c];
+}
+$("#seg").addEventListener("click",e=>{if(e.target.dataset.cat)setCat(e.target.dataset.cat);});
+$("#copyprompt").addEventListener("click",()=>copyText(PROMPTS[category],"Prompt copied"));
+
+/* ---------------- reconcile engine ---------------- */
+const ENT_LABELS={country:"Country",city:"City",place:"Place",coords:"Coords",what3words:"what3words",
+  street:"Street",landmark:"Landmark",language:"Language",aircraft_reg:"Aircraft reg",callsign:"Callsign",
+  flight:"Flight",airport:"Airport",operator:"Operator",ship:"Ship",station:"Station",org:"Org",
+  person:"Person",date:"Date",url:"URL",reference:"Ref",misc:"Note"};
+const GEO_KEYS=["country","city","place","street","landmark","station","airport","org","person"];
+
+function parseAnswer(text){
+  const out={next:"",ents:{}};
+  if(!text)return out;
+  const nx=text.match(/NEXT:\s*(.+)/i); if(nx)out.next=nx[1].trim().replace(/\s+/g," ").slice(0,240);
+  const el=text.match(/ENTITIES:\s*(.+)/i);
+  if(el){
+    el[1].split(";").forEach(p=>{
+      const i=p.indexOf("="); if(i<0)return;
+      const k=p.slice(0,i).trim().toLowerCase(), v=p.slice(i+1).trim();
+      if(k&&v&&v.toLowerCase()!=="none"&&v.toLowerCase()!=="n/a"&&ENT_LABELS[k]){(out.ents[k]=out.ents[k]||[]).push(v);}
+    });
+  }
+  // regex backstops over the whole text
+  const push=(k,v)=>{(out.ents[k]=out.ents[k]||[]);if(!out.ents[k].some(x=>x.toLowerCase()===v.toLowerCase()))out.ents[k].push(v);};
+  (text.match(/-?\d{1,3}\.\d{3,},\s*-?\d{1,3}\.\d{3,}/g)||[]).forEach(v=>push("coords",v.replace(/\s/g,"")));
+  (text.match(/\/{3}[a-z]+\.[a-z]+\.[a-z]+/gi)||[]).forEach(v=>push("what3words",v.replace(/^\/{3}/,"")));
+  (text.match(/https?:\/\/[^\s)]+/g)||[]).forEach(v=>push("url",v));
+  return out;
+}
+function keyify(v){return v.toLowerCase().replace(/[^a-z0-9 ]/g,"").trim();}
+
+function pivotsFor(k,v){
+  const L=[]; const q=enc(v);
+  const add=(label,url)=>L.push({label,url});
+  switch(k){
+    case "coords":{const c=v.replace(/\s/g,"");add("Google Maps",`https://www.google.com/maps/search/?api=1&query=${c}`);add("Google Earth",`https://earth.google.com/web/search/${c}`);add("Bing Maps",`https://www.bing.com/maps?cp=${c.replace(",","~")}&lvl=17`);break;}
+    case "what3words":add("what3words",`https://what3words.com/${v}`);break;
+    case "aircraft_reg":add("Planespotters",`https://www.planespotters.net/search?q=${q}`);add("FlightRadar24",`https://www.flightradar24.com/data/aircraft/${q}`);add("JetPhotos",`https://www.jetphotos.com/registration/${q}`);break;
+    case "callsign":case "flight":add("FlightRadar24",`https://www.flightradar24.com/data/flights/${q}`);add("FlightAware",`https://flightaware.com/live/flight/${q}`);break;
+    case "airport":add("FR24 airport",`https://www.flightradar24.com/airport/${q}`);add("Airport codes",`https://www.world-airport-codes.com/search/?s=${q}`);break;
+    case "ship":add("MarineTraffic",`https://www.marinetraffic.com/en/ais/index/search/all?keyword=${q}`);add("VesselFinder",`https://www.vesselfinder.com/vessels?name=${q}`);break;
+    case "station":add("Maps",`https://www.google.com/maps/search/?api=1&query=${q}`);add("OpenRailwayMap",`https://www.openrailwaymap.org/`);break;
+    case "url":add("Open",v);break;
+    case "language":add("Translate",`https://translate.google.com/?sl=auto&tl=en&text=${q}`);break;
+    case "date":add("Search",`https://www.google.com/search?q=${q}`);break;
+    default:add("Maps",`https://www.google.com/maps/search/?api=1&query=${q}`);add("Google",`https://www.google.com/search?q=${q}`);add("Wikipedia",`https://en.wikipedia.org/w/index.php?search=${q}`);
+  }
+  return L;
+}
+
+$("#compare").addEventListener("click",()=>{
+  const A=parseAnswer($("#ansA").value), B=parseAnswer($("#ansB").value);
+  const hasA=!!$("#ansA").value.trim(), hasB=!!$("#ansB").value.trim();
+  const rec=$("#rec");
+  if(!hasA&&!hasB){rec.innerHTML='<p class="rec-empty">Paste at least one answer above, then compare.</p>';return;}
+  let html="";
+
+  // top leads (NEXT lines)
+  if(A.next){html+=`<div class="lead"><div class="src" style="color:var(--claude)">Claude · next</div><div class="txt">${escapeHtml(A.next)}</div></div>`;}
+  if(B.next){html+=`<div class="lead"><div class="src" style="color:var(--gpt)">ChatGPT · next</div><div class="txt">${escapeHtml(B.next)}</div></div>`;}
+
+  // merge entities with source tracking
+  const merged={}; // key -> Map(keyified -> {display, srcs:Set})
+  const ingest=(obj,src)=>{for(const k in obj.ents){merged[k]=merged[k]||new Map();obj.ents[k].forEach(v=>{const kk=keyify(v);if(!kk)return;const e=merged[k].get(kk)||{display:v,srcs:new Set()};e.srcs.add(src);merged[k].set(kk,e);});}};
+  ingest(A,"C"); ingest(B,"G");
+
+  // agreement (geo-ish keys mentioned by both)
+  const agree=[];
+  for(const k of Object.keys(merged)){for(const e of merged[k].values()){if(e.srcs.size===2&&GEO_KEYS.includes(k))agree.push({k,v:e.display});}}
+  if(agree.length){
+    html+=`<div class="lead agree"><div class="src" style="color:var(--gpt)">Both models agree</div><div class="txt">${agree.map(a=>`${ENT_LABELS[a.k]}: <b>${escapeHtml(a.v)}</b>`).join(" · ")}</div></div>`;
+  }
+
+  // pivots per entity
+  lastEntities=[];
+  let chipHtml="";
+  const order=["coords","what3words","place","city","country","landmark","street","station","airport","aircraft_reg","callsign","flight","operator","ship","org","person","date","language","url","misc","reference"];
+  const keys=Object.keys(merged).sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  for(const k of keys){
+    for(const e of merged[k].values()){
+      lastEntities.push(`${ENT_LABELS[k]}: ${e.display}`);
+      const both=e.srcs.size===2;
+      const piv=pivotsFor(k,e.display);
+      chipHtml+=`<div style="margin-bottom:9px"><span class="badge ${both?'both':''}" title="${both?'both models':(e.srcs.has('C')?'Claude':'ChatGPT')}">${ENT_LABELS[k]}</span> <span style="font-size:12.5px">${escapeHtml(e.display)}</span><div class="chips" style="margin-top:6px">${piv.map(p=>`<a class="chip" href="${p.url}" target="_blank" rel="noopener">${p.label} ↗</a>`).join("")}</div></div>`;
+    }
+  }
+  if(chipHtml){html+=`<div class="recgroup"><h4>Pivots — every lead the models surfaced</h4>${chipHtml}</div>`;}
+
+  // always-on baseline geo moves
+  html+=`<div class="recgroup"><h4>Always worth a pass</h4><div class="chips">
+    <a class="chip" href="https://yandex.com/images/search?rpt=imageview" target="_blank" rel="noopener">Yandex reverse image ↗</a>
+    <a class="chip" href="https://lens.google.com/" target="_blank" rel="noopener">Google Lens ↗</a>
+    <a class="chip" href="https://www.bing.com/visualsearch" target="_blank" rel="noopener">Bing visual ↗</a>
+    <a class="chip" href="https://www.suncalc.org/" target="_blank" rel="noopener">SunCalc (shadow → time) ↗</a>
+  </div><p class="hint">Reverse-image sites need the picture: hit “Copy image” up top, then paste into the tab.</p></div>`;
+
+  if(!chipHtml&&!agree.length&&!A.next&&!B.next){
+    html+=`<p class="rec-empty">No structured leads parsed. Make sure the models kept the NEXT: and ENTITIES: lines at the end, or just read their answers directly.</p>`;
+  }
+  rec.innerHTML=html;
+});
+$("#clearans").addEventListener("click",()=>{$("#ansA").value="";$("#ansB").value="";});
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+/* ---------------- right rail: tabs ---------------- */
+$("#tabs").addEventListener("click",e=>{const p=e.target.dataset.pane;if(!p)return;
+  $$("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.pane===p));
+  $$(".pane").forEach(pn=>pn.classList.toggle("on",pn.id==="pane-"+p));
+});
+
+/* ---------------- quick search + link library ---------------- */
+function quickSearch(){const t=$("#q").value.trim();if(!t){toast("Type something first");return;}const q=enc(t);
+  [ `https://www.google.com/maps/search/?api=1&query=${q}`,
+    `https://www.google.com/search?q=${q}`,
+    `https://yandex.com/images/search?text=${q}`,
+    `https://en.wikipedia.org/w/index.php?search=${q}` ].forEach(open_);
+}
+$("#qgo").addEventListener("click",quickSearch);
+$("#q").addEventListener("keydown",e=>{if(e.key==="Enter")quickSearch();});
+
+const LINKS=[
+  ["Reverse image",[["Yandex (best for geo)","https://yandex.com/images/"],["Google Lens","https://lens.google.com/"],["Bing Visual","https://www.bing.com/visualsearch"],["TinEye","https://tineye.com/"]]],
+  ["Maps & geo",[["Google Maps","https://www.google.com/maps"],["Google Earth","https://earth.google.com/web/"],["Bing Maps","https://www.bing.com/maps"],["Overpass Turbo","https://overpass-turbo.eu/"],["what3words","https://what3words.com/"],["SunCalc","https://www.suncalc.org/"],["Mapillary","https://www.mapillary.com/app"],["KartaView","https://kartaview.org/"],["Wikimapia","https://wikimapia.org/"]]],
+  ["Transport",[["FlightRadar24","https://www.flightradar24.com/"],["ADS-B Exchange","https://globe.adsbexchange.com/"],["FlightAware","https://flightaware.com/"],["Planespotters","https://www.planespotters.net/"],["JetPhotos","https://www.jetphotos.com/"],["MarineTraffic","https://www.marinetraffic.com/"],["VesselFinder","https://www.vesselfinder.com/"],["OpenRailwayMap","https://www.openrailwaymap.org/"]]],
+  ["Translate / OCR",[["Google Translate","https://translate.google.com/"],["DeepL","https://www.deepl.com/translator"],["Yandex Translate","https://translate.yandex.com/"],["Google Lens OCR","https://lens.google.com/"]]],
+  ["Metadata",[["Jimpl EXIF","https://jimpl.com/"],["metadata2go","https://www.metadata2go.com/"],["FotoForensics","https://fotoforensics.com/"]]],
+  ["People / handles",[["WhatsMyName","https://whatsmyname.app/"],["Namechk","https://namechk.com/"],["IntelTechniques","https://inteltechniques.com/tools/"]]]
+];
+$("#quicklinks").innerHTML=LINKS.map(([g,items])=>`<div class="linkgroup"><h4>${g}</h4><div class="chips">${items.map(([n,u])=>`<a class="chip" href="${u}" target="_blank" rel="noopener">${n} ↗</a>`).join("")}</div></div>`).join("");
+
+/* ---------------- playbook ---------------- */
+$("#playbook").innerHTML=`
+<h4>How to run it</h4>
+<ul>
+<li>Drop image → <b>Analyze</b> (metadata + OCR), then <b>Copy prompt</b>.</li>
+<li>Paste into Claude and ChatGPT, attach the image, send.</li>
+<li>Paste both replies into step 04 → <b>Compare</b> → chase the pivots.</li>
+<li>Drop findings in Discord with the Notes tab.</li>
+</ul>
+<h4>Geolocation checklist</h4>
+<ul>
+<li>Which side do they drive on? Line colours (white vs yellow)?</li>
+<li>License plates: shape, colour, EU/US band, script.</li>
+<li>Signage language + script → narrows country fast.</li>
+<li>Bollards, guardrails, power poles, road signs (GeoGuessr "meta").</li>
+<li>Architecture, roof style, building materials, climate/vegetation.</li>
+<li>Sun position + shadows → hemisphere and rough time (SunCalc).</li>
+<li>Any business name → search it, then Street View the address.</li>
+</ul>
+<h4>Quick country tells</h4>
+<table>
+<tr><td>Drive on left</td><td>UK, JP, AU, IN, ZA, TH, ID…</td></tr>
+<tr><td>Yellow centre lines</td><td>US, parts of LATAM, KR</td></tr>
+<tr><td>Red/white bollards</td><td>often EU; shape varies by country</td></tr>
+<tr><td>Cyrillic script</td><td>RU, UA, BG, RS, KZ… (use Yandex)</td></tr>
+<tr><td>Hangul / kana</td><td>Korea / Japan</td></tr>
+</table>
+<h4>Transport</h4>
+<ul>
+<li>Read the livery + tail; get the registration → Planespotters / FR24.</li>
+<li>Use the photo date/time to filter FlightRadar24 or ADS-B Exchange history.</li>
+<li>Trains: operator colours + station name → OpenRailwayMap + Maps.</li>
+</ul>
+<h4>Document</h4>
+<ul>
+<li>Full EXIF via Jimpl/metadata2go; check GPS, device, timestamps.</li>
+<li>Transcribe + translate everything; note date formats and refs.</li>
+<li>FotoForensics (ELA) for edits; reverse-image any embedded photo.</li>
+</ul>
+<h4>Dark web / onion (manual)</h4>
+<ul>
+<li>Needs Tor Browser — the tool can't reach onion sites for you.</li>
+<li>Index/search: Ahmia (ahmia.fi) on clearnet to find onions.</li>
+</ul>`;
+
+/* ---------------- notes / discord ---------------- */
+$("#copyDiscord").addEventListener("click",()=>{
+  const name=$("#challName").value.trim()||"(challenge)";
+  const notes=$("#notes").value.trim();
+  let s=`**${name}**\n`;
+  if(notes)s+=notes+"\n";
+  if(lastEntities.length)s+="\nLeads: "+lastEntities.join(" · ");
+  copyText(s.trim(),"Copied for Discord");
+});
+$("#clearNotes").addEventListener("click",()=>{$("#notes").value="";$("#challName").value="";});
+
+/* ---------------- init ---------------- */
+setCat("geo");
+</script>
+</body>
+</html>
