@@ -8,9 +8,26 @@ The goal is not just to automate lookups. It is to teach the method behind them,
 
 | Tool | File | What it does |
 |------|------|--------------|
-| OSINT Learning Tool | [`OSINT-Learning-Tool.html`](OSINT-Learning-Tool.html) | Teaching-first pivot console. Type any indicator, learn where to look and why, get a model-agnostic AI prompt, paste findings back to extract pivots, and build an exportable case. |
+| OSINT Learning Tool | [`tools/OSINT-Learning-Tool.html`](tools/OSINT-Learning-Tool.html) | Teaching-first pivot console. Type any indicator, learn where to look and why, get a model-agnostic AI prompt, paste findings back to extract pivots, and build an exportable case you can view as a node map. |
 
 More tools will land here over time. See the [roadmap](#roadmap).
+
+## Repository layout
+
+```
+index.html        Landing page listing every tool. Open it to browse the toolkit.
+tools/            One self-contained HTML file per tool.
+CONTRIBUTING.md   House style and conventions for adding a tool.
+LICENSE           MIT.
+```
+
+Open `index.html` by double-click to browse everything, or go straight to a file in `tools/`. Both work offline from disk.
+
+To grab the whole repo:
+
+```
+git clone https://github.com/exempliar/osint-toolkit.git
+```
 
 ## OSINT Learning Tool
 
@@ -22,22 +39,14 @@ What it gives you:
 - **Mapped sources with reasoning.** The places to look, each with a short note on *why* that source matters for this indicator type, not just a bare link.
 - **Model-agnostic AI prompts** in four modes: Learn, Pivot, Verify, and Report. Copy the prompt, run it in whatever AI you use, and bring the answer back.
 - **Paste-back pivot extraction.** Drop the AI's answer into the tool and it pulls out new indicators as clickable pivots, so a lead turns into the next step.
-- **A running Case.** Everything you collect is gathered into a case you can export to Markdown.
+- **A running Case,** viewable as a list or as a node map so the chain of pivots is visible, and exportable to Markdown.
 - **Local memory.** Favorites, notes, and custom sources persist in the browser you open it in. Nothing is uploaded anywhere.
 
 ### Run it locally
 
-1. Download [`OSINT-Learning-Tool.html`](OSINT-Learning-Tool.html) (on the file page, click the download / raw button and save it).
+1. Download [`tools/OSINT-Learning-Tool.html`](tools/OSINT-Learning-Tool.html) (on the file page, click the download / raw button and save it).
 2. Double-click the file. It opens in your default browser and runs fully offline.
 3. That is it. No install, no accounts, no server.
-
-To grab the whole repo instead:
-
-```
-git clone https://github.com/exempliar/osint-toolkit.git
-```
-
-Then open `OSINT-Learning-Tool.html` from the folder.
 
 ### How to use it, step by step
 
@@ -51,7 +60,7 @@ Then open `OSINT-Learning-Tool.html` from the folder.
    - **Report** turns what you have into a clean writeup.
 5. **Run the prompt in your AI**, then **paste the answer back** into the tool. It extracts any new indicators as clickable pivots.
 6. **Click a pivot** to start the loop again on the new lead. The Case grows as you go.
-7. **Export the Case to Markdown** when you are done, for your notes or a report.
+7. **Switch the Case to map view** to see the chain of pivots as a node graph, and **export to Markdown** when you are done.
 
 ### Privacy and safety
 
@@ -66,7 +75,6 @@ Use it only against targets you are authorized to investigate, and follow the te
 
 Planned and in consideration:
 
-- Session map: draw the collected Case as a small node graph so a chain of pivots is visible.
 - Step-by-step playbooks per indicator type (ordered first moves).
 - A query and dork builder to teach search operators.
 - More self-contained tools alongside the Learning Tool.
@@ -74,6 +82,8 @@ Planned and in consideration:
 ## Contributing
 
 Issues and pull requests are welcome. The house style is simple: one self-contained file per tool, offline first, no build step, and every feature should teach the method as well as run it.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full conventions, including the shared palette and the checklist for adding a tool.
 
 ## License
 
