@@ -11,6 +11,7 @@ The goal is not just to automate lookups. It is to teach the method behind them,
 | OSINT Learning Tool | [`tools/OSINT-Learning-Tool.html`](tools/OSINT-Learning-Tool.html) | Teaching-first pivot console. Type any indicator, learn where to look and why, get a model-agnostic AI prompt, paste findings back to extract pivots, and build an exportable case you can view as a node map. |
 | SONAR — Image OSINT Cockpit | [`tools/SONAR-OSINT-Cockpit.html`](tools/SONAR-OSINT-Cockpit.html) | Everything-from-a-picture cockpit. Drop an image, pull EXIF and OCR, copy a prompt to your AI, paste back to reconcile and pivot. Geolocation, transport visuals, and documents. |
 | MANIFEST — Records Cockpit | [`tools/MANIFEST-Records-Cockpit.html`](tools/MANIFEST-Records-Cockpit.html) | The non-image companion to SONAR. Pick an entity type, drop the selector, and get targeted registry and tracker lookups, a prompt tuned per type, first moves, and a findings log. |
+| DORK — Query Builder | [`tools/DORK-Query-Builder.html`](tools/DORK-Query-Builder.html) | Compose search queries across five engines with every operator explained as it goes in. Anatomy breakdown, cross-engine support matrix, and a checker for the mistakes that silently break a dork. |
 
 More tools will land here over time. See the [roadmap](#roadmap).
 
@@ -92,6 +93,24 @@ Pick an entity type — person, company, vessel, aircraft, domain and infrastruc
 
 MANIFEST makes no network requests of its own. Every lookup is a link you choose to open.
 
+## DORK — Query Builder
+
+The other tools tell you where to look. This one tells you what to type once you get there.
+
+Pick an engine — Google, Bing, DuckDuckGo, GitHub code search, or Shodan — and either start from an objective (exposed documents, directory listings, login pages, subdomains, secrets in code, exposed services) or build the query by hand. As each operator goes in, the tool explains what it does and why it matters for OSINT.
+
+What makes it a teaching tool rather than a query box:
+
+- **Live anatomy.** The finished query is broken into its parts, each labelled with what it is doing and why that matters.
+- **Cross-engine support matrix.** The same capability has different syntax on different engines, and some engines simply lack it. `inbody:` on Bing is `intext:` on Google; `ip:` exists on Bing and nowhere else. The matrix makes that visible instead of leaving you to discover it by failure.
+- **A checker that catches silent failures.** Two `site:` operators AND together and return nothing. Lowercase `or` is not an operator. An ungrouped `OR` swallows the rest of the query. DuckDuckGo ignores unsupported operators rather than rejecting them. These are the mistakes that make a dork look precise while doing almost nothing, and the tool flags them before you run.
+- **Operator reference** for the selected engine — what each one does, why it matters, an example, and what to watch out for.
+- **Footprint framing.** Searching is passive: you are querying an index someone else built, and the target learns nothing. Opening a result is not — that is the moment you appear in their logs.
+
+**Teaches** what each operator actually does, how support differs between engines, and why zero results usually means the query is too tight rather than the thing not existing.
+
+DORK makes no network requests of its own. Queries are composed locally, and only leave your machine if you click through to an engine. Saved queries are stored in your browser.
+
 ## Privacy and safety
 
 Applies to every tool in this repo:
@@ -109,7 +128,8 @@ Use these only against targets you are authorized to investigate, and follow the
 Planned and in consideration:
 
 - Step-by-step playbooks per indicator type (ordered first moves).
-- A query and dork builder to teach search operators.
+- A decode and convert workbench — identify and convert encodings, timestamps, and coordinate formats, and explain how each was recognised.
+- A timeline reconciler — build a chronology from events across sources with mixed timezones, and flag contradictions.
 - More self-contained tools alongside the Learning Tool.
 
 ## Contributing

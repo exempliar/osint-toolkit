@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DORK — Query Builder</title>
+<style>
+  :root{
+    --bg:#050507;
+    --panel:#0d0d11;
+    --panel2:#101016;
+    --line:#1c1c24;
+    --line2:#262630;
+    --txt:#e7e7ee;
+    --muted:#8b8b98;
+    --dim:#5a5a67;
+    --cyan:#2fe4d4;
+    --cyandim:#155e58;
+    --mag:#ff5db1;
+    --magdim:#5e2545;
+    --amber:#ffcf5c;
+    --green:#7be88a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--txt);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  code,.mono{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace}
+  a{color:var(--cyan);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button{font-family:inherit;cursor:pointer;color:var(--txt);background:transparent;border:1px solid var(--line2);border-radius:0}
+  button:hover{border-color:var(--cyan)}
+  input,textarea,select{font-family:inherit;color:var(--txt);background:var(--panel2);border:1px solid var(--line2);border-radius:0;outline:none}
+  input:focus,textarea:focus,select:focus{border-color:var(--cyan)}
+  ::placeholder{color:var(--dim)}
+
+  .wrap{max-width:1240px;margin:0 auto;padding:22px 20px 60px}
+
+  header.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:12px}
+  .brand h1{font-size:16px;letter-spacing:2px;font-weight:600;margin:0;text-transform:uppercase}
+  .brand h1 .dot{color:var(--cyan)}
+  .brand .tag{color:var(--muted);font-size:12px}
+  .topnav{display:flex;gap:14px;font-size:12px}
+  .topnav a{color:var(--muted);cursor:pointer;letter-spacing:.5px}
+  .topnav a:hover{color:var(--cyan);text-decoration:none}
+
+  .section-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+
+  .cols{display:grid;grid-template-columns:1fr 400px;gap:22px;align-items:start}
+  @media(max-width:980px){.cols{grid-template-columns:1fr}}
+
+  /* engine bar */
+  .enginebar{display:flex;gap:0;margin-bottom:6px;flex-wrap:wrap}
+  .enginebar button{padding:8px 15px;font-size:12px;letter-spacing:.5px;color:var(--muted)}
+  .enginebar button+button{border-left:none}
+  .enginebar button.on{color:var(--cyan);border-color:var(--cyan)}
+  .engnote{font-size:12px;color:var(--muted);margin:0 0 20px;border-left:2px solid var(--cyandim);padding-left:10px}
+  .engnote b{color:var(--txt);font-weight:600}
+
+  /* recipes */
+  .recipes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .recipes button{padding:6px 11px;font-size:11.5px;color:var(--muted);letter-spacing:.3px}
+  .recipes button:hover{color:var(--cyan)}
+  .recipes button.on{color:var(--cyan);border-color:var(--cyan)}
+  .goal{font-size:12.5px;color:#cfd0d8;border-left:2px solid var(--mag);padding-left:11px;margin:0 0 20px;min-height:0}
+  .goal:empty{display:none}
+
+  /* term inputs */
+  .termrow{display:flex;gap:0;border:1px solid var(--line2);align-items:stretch;margin-bottom:8px}
+  .termrow input{flex:1;border:none;background:transparent;padding:11px 13px;font-size:14px}
+  .termrow .tog{display:flex}
+  .termrow .tog button{padding:0 12px;font-size:11px;letter-spacing:.5px;color:var(--dim);border:none;border-left:1px solid var(--line2)}
+  .termrow .tog button.on{color:var(--cyan)}
+  .exrow{margin-bottom:18px}
+  .exrow input{width:100%;padding:10px 13px;font-size:13px}
+
+  /* operator rows */
+  .oprow{display:flex;gap:0;margin-bottom:7px;align-items:stretch;border:1px solid var(--line2)}
+  .oprow select{border:none;background:var(--panel2);padding:9px 8px;font-size:12.5px;min-width:132px;border-right:1px solid var(--line2)}
+  .oprow input{flex:1;border:none;background:transparent;padding:9px 12px;font-size:13px}
+  .oprow .kill{border:none;border-left:1px solid var(--line2);padding:0 12px;color:var(--dim);font-size:15px;line-height:1}
+  .oprow .kill:hover{color:var(--mag)}
+  .oprow.unsupported{border-color:var(--magdim)}
+  .addop{padding:7px 14px;font-size:12px;letter-spacing:.5px;color:var(--cyan);border-color:var(--cyandim);margin-bottom:22px}
+
+  /* query out */
+  .qbox{border:1px solid var(--line2);border-top:1px solid var(--cyan);margin-bottom:22px}
+  .qbox .q{padding:15px 16px;font-size:13.5px;line-height:1.6;word-break:break-word;color:#d7d8e0;min-height:54px}
+  .qbox .q .ph{color:var(--dim)}
+  .qbox .bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--line);gap:10px;flex-wrap:wrap}
+  .qbox .bar .left{display:flex;gap:7px}
+  .qbox .bar button{padding:6px 13px;font-size:11.5px;letter-spacing:.5px}
+  .copybtn{color:var(--cyan);border-color:var(--cyandim)}
+  .copybtn.done{color:var(--green);border-color:var(--green)}
+  .runbtn{color:var(--amber);border-color:#5c4a1f}
+  .qbox .bar .count{font-size:11px;color:var(--dim)}
+
+  /* anatomy */
+  .anat{border:1px solid var(--line);margin-bottom:22px}
+  .anat .row{display:grid;grid-template-columns:190px 1fr;gap:0;border-bottom:1px solid var(--line)}
+  .anat .row:last-child{border-bottom:none}
+  .anat .row .tk{padding:9px 12px;font-size:12.5px;color:var(--cyan);border-right:1px solid var(--line);word-break:break-all;background:var(--panel)}
+  .anat .row .ds{padding:9px 13px;font-size:12.5px;color:var(--muted)}
+  .anat .row .ds b{color:var(--txt);font-weight:600}
+  @media(max-width:600px){.anat .row{grid-template-columns:1fr}.anat .row .tk{border-right:none;border-bottom:1px solid var(--line)}}
+
+  /* side panels */
+  .panelbox{border:1px solid var(--line);background:var(--panel);margin-bottom:18px}
+  .panelbox h3{margin:0;padding:10px 13px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--line);font-weight:600}
+  .panelbox .body{padding:12px 13px;font-size:12.5px;color:var(--muted)}
+  .panelbox .body p{margin:0 0 9px}
+  .panelbox .body p:last-child{margin-bottom:0}
+
+  /* pitfalls */
+  .pit{padding:10px 13px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+  .pit:last-child{border-bottom:none}
+  .pit b{display:block;color:var(--amber);font-size:11px;letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px;font-weight:600}
+  .pit.ok b{color:var(--green)}
+  .pit.hard b{color:var(--mag)}
+
+  /* operator reference */
+  .opref{max-height:340px;overflow-y:auto}
+  .opitem{border-bottom:1px solid var(--line);padding:9px 13px;cursor:pointer}
+  .opitem:last-child{border-bottom:none}
+  .opitem:hover{background:var(--panel2)}
+  .opitem .k{font-size:12.5px;color:var(--cyan)}
+  .opitem .d{font-size:12px;color:var(--muted);margin-top:2px}
+  .opitem.open .d{color:var(--txt)}
+  .opdetail{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:none}
+  .opitem.open .opdetail{display:block}
+  .opdetail .lb{color:var(--dim);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;display:block;margin:7px 0 2px}
+  .opdetail .lb:first-child{margin-top:0}
+  .opdetail .ex{color:var(--cyan)}
+  .opdetail .pf{color:var(--amber)}
+
+  /* support matrix */
+  .matrix{width:100%;border-collapse:collapse;font-size:11.5px}
+  .matrix th{text-align:left;padding:7px 9px;color:var(--dim);font-weight:600;font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--line)}
+  .matrix td{padding:6px 9px;border-bottom:1px solid var(--line);color:var(--muted)}
+  .matrix tr:last-child td{border-bottom:none}
+  .matrix .y{color:var(--green)}
+  .matrix .n{color:var(--dim)}
+  .matrix .alt{color:var(--amber)}
+
+  /* saved */
+  .saved .s{padding:9px 13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:9px;align-items:flex-start}
+  .saved .s:last-child{border-bottom:none}
+  .saved .s .qq{font-size:11.5px;color:var(--muted);word-break:break-all;flex:1;cursor:pointer}
+  .saved .s .qq:hover{color:var(--cyan)}
+  .saved .s .x{color:var(--dim);cursor:pointer;font-size:14px;line-height:1}
+  .saved .s .x:hover{color:var(--mag)}
+  .saved .empty{padding:12px 13px;font-size:12px;color:var(--dim)}
+
+  .foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--cyan);color:var(--txt);padding:9px 16px;font-size:12.5px;z-index:50;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>DORK<span class="dot">.</span>BUILDER</h1>
+      <span class="tag">compose the query · learn the operators</span>
+    </div>
+    <nav class="topnav">
+      <a id="navclear">Clear</a>
+      <a id="navsave">Save query</a>
+    </nav>
+  </header>
+
+  <p class="section-label">Engine</p>
+  <div class="enginebar" id="enginebar"></div>
+  <p class="engnote" id="engnote"></p>
+
+  <div class="cols">
+    <div>
+
+      <p class="section-label">Start from an objective</p>
+      <div class="recipes" id="recipes"></div>
+      <p class="goal" id="goal"></p>
+
+      <p class="section-label">Terms</p>
+      <div class="termrow">
+        <input id="terms" placeholder="words to search for" autocomplete="off" spellcheck="false">
+        <div class="tog">
+          <button id="togexact" title="Wrap in quotes to force an exact phrase">" EXACT "</button>
+        </div>
+      </div>
+      <div class="exrow">
+        <input id="exclude" class="mono" placeholder="exclude these words (space separated)" autocomplete="off" spellcheck="false">
+      </div>
+
+      <p class="section-label">Operators</p>
+      <div id="oprows"></div>
+      <button class="addop" id="addop">+ ADD OPERATOR</button>
+
+      <p class="section-label">Query</p>
+      <div class="qbox">
+        <div class="q mono" id="qout"></div>
+        <div class="bar">
+          <div class="left">
+            <button class="copybtn" id="copy">COPY</button>
+            <button class="runbtn" id="run">OPEN IN ENGINE &rarr;</button>
+          </div>
+          <span class="count" id="count"></span>
+        </div>
+      </div>
+
+      <p class="section-label">Anatomy &mdash; what each part is doing</p>
+      <div class="anat" id="anat"></div>
+
+    </div>
+
+    <div>
+      <div class="panelbox">
+        <h3>Check before you run</h3>
+        <div id="pitfalls"></div>
+      </div>
+
+      <div class="panelbox">
+        <h3>Operators on this engine</h3>
+        <div class="opref" id="opref"></div>
+      </div>
+
+      <div class="panelbox">
+        <h3 id="matrixhead">Support across engines</h3>
+        <div class="body" style="padding:0">
+          <table class="matrix" id="matrix"></table>
+        </div>
+      </div>
+
+      <div class="panelbox saved">
+        <h3>Saved queries</h3>
+        <div id="savedlist"></div>
+      </div>
+
+      <div class="panelbox">
+        <h3>Footprint</h3>
+        <div class="body">
+          <p><b style="color:var(--green)">Searching is passive.</b> You are querying an index someone else already built. The target learns nothing.</p>
+          <p><b style="color:var(--mag)">Opening a result is not.</b> The moment you click through to a live host, you appear in its logs with your IP, referrer, and user agent. Read the snippet first and decide whether you need the page itself.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot">Runs offline from a single file. Nothing you type leaves this page &mdash; queries are built locally and only sent anywhere if you choose to open one. Saved queries live in this browser only.</p>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------- operator definitions ----------
+   key: canonical name used for the cross-engine matrix
+   syn: how it is written on THIS engine (may differ, e.g. filetype vs ext)
+*/
+var OPS = {
+  site:      {key:"site", label:"site:", ph:"example.com",
+              what:"Restrict results to one domain, subdomain, or TLD.",
+              why:"The single highest-value operator in OSINT. It turns a whole-web search into an audit of one organisation's surface.",
+              ex:"site:example.com",
+              pit:"Two site: operators AND together and return nothing. To search several domains, use OR inside parentheses."},
+  filetype:  {key:"filetype", label:"filetype:", ph:"pdf",
+              what:"Return only files with one extension.",
+              why:"Documents leak what web pages do not — internal reports, spreadsheets, slide decks and scans are routinely published and forgotten.",
+              ex:"filetype:pdf",
+              pit:"One extension per operator. Chain several with OR, and remember the extension is matched, not the real file format."},
+  ext:       {key:"filetype", label:"ext:", ph:"pdf",
+              what:"Alias for filetype:.",
+              why:"Identical behaviour, shorter to type.",
+              ex:"ext:xlsx",
+              pit:"Same operator under a different name — using both in one query gains you nothing."},
+  inurl:     {key:"inurl", label:"inurl:", ph:"admin",
+              what:"The term must appear somewhere in the URL.",
+              why:"Paths are honest. Applications name their own routes, so /admin, /login, /backup and /.git surface by structure rather than by content.",
+              ex:"inurl:login",
+              pit:"Matches substrings anywhere in the URL including query strings, so it produces noise on long parameterised links."},
+  intitle:   {key:"intitle", label:"intitle:", ph:"index of",
+              what:"The term must appear in the page title.",
+              why:"Titles are generated by software far more often than written by people, which makes them a reliable fingerprint for default pages.",
+              ex:"intitle:\"index of\"",
+              pit:"Only constrains the first term unless you quote a phrase or use allintitle:."},
+  intext:    {key:"intext", label:"intext:", ph:"confidential",
+              what:"The term must appear in the body text.",
+              why:"Forces a word into the page itself rather than a link pointing at it, which cuts out pages that merely reference your term.",
+              ex:"intext:\"internal use only\"",
+              pit:"Slower and more easily ignored than title or URL operators. Reach for it when a plain term returns pages that only link to what you want."},
+  ip:        {key:"ip", label:"ip:", ph:"93.184.216.34",
+              what:"Find pages hosted on a specific IP address.",
+              why:"Reveals co-hosted sites. Shared infrastructure is one of the most reliable ways to connect properties that hide their ownership.",
+              ex:"ip:93.184.216.34",
+              pit:"Bing only, and it reflects Bing's crawl rather than current DNS, so results lag reality."},
+  language:  {key:"language", label:"language:", ph:"en",
+              what:"Restrict to pages in one language.",
+              why:"Separates a local-language presence from an international one, which matters when a target operates in several regions.",
+              ex:"language:de",
+              pit:"Detected, not declared — short pages are often misclassified."},
+  contains:  {key:"contains", label:"contains:", ph:"pdf",
+              what:"Pages that link to a file of this type.",
+              why:"Finds the index page rather than the document, which is often where the useful context sits.",
+              ex:"contains:xlsx",
+              pit:"Bing only. Returns the linking page, not the file itself — do not confuse it with filetype:."},
+  inbody:    {key:"intext", label:"inbody:", ph:"annual report",
+              what:"Bing's equivalent of intext:.",
+              why:"Same idea as intext: — forces the term into the page body.",
+              ex:"inbody:\"annual report\"",
+              pit:"Bing names this differently from Google. The concept transfers, the syntax does not."},
+  url:       {key:"url", label:"url:", ph:"example.com/page",
+              what:"Check whether a specific URL is indexed.",
+              why:"A quick yes/no on whether a page is publicly discoverable at all.",
+              ex:"url:example.com/private",
+              pit:"Answers indexing, not existence. An unindexed page may still be live and reachable."},
+  repo:      {key:"repo", label:"repo:", ph:"owner/name",
+              what:"Search inside one repository.",
+              why:"Narrows code search to a known project instead of the whole platform.",
+              ex:"repo:torvalds/linux",
+              pit:"Requires the full owner/name form. The bare repository name will not match."},
+  org:       {key:"org", label:"org:", ph:"github",
+              what:"Search all repositories owned by an organisation.",
+              why:"The organisation is the useful unit for OSINT — it covers repositories you did not know existed.",
+              ex:"org:example-corp",
+              pit:"Only public repositories, and only what the org has not moved elsewhere."},
+  user:      {key:"user", label:"user:", ph:"octocat",
+              what:"Search all repositories owned by a user.",
+              why:"Personal repositories are where secrets get committed by accident far more often than in org repos.",
+              ex:"user:octocat",
+              pit:"Only catches code under that account. Contributions to other projects are not included."},
+  path:      {key:"path", label:"path:", ph:"*.env",
+              what:"Match files by path or filename pattern.",
+              why:"Configuration files are named by convention, so the filename alone is a strong signal.",
+              ex:"path:*.env",
+              pit:"This replaced the older filename: and extension: operators. Guides written before 2023 will show syntax that no longer works."},
+  gh_lang:   {key:"language", label:"language:", ph:"python",
+              what:"Restrict to one programming language.",
+              why:"Cuts vendored and generated files that would otherwise dominate results.",
+              ex:"language:python",
+              pit:"Detected from the file, and frequently wrong for small or unusual files."},
+  content:   {key:"intext", label:"content:", ph:"api_key",
+              what:"Match text inside the file.",
+              why:"The literal string search that most code hunting actually depends on.",
+              ex:"content:\"BEGIN RSA PRIVATE KEY\"",
+              pit:"GitHub code search needs you signed in, and it will not return results for very common strings."},
+  port:      {key:"port", label:"port:", ph:"22",
+              what:"Hosts with this port open.",
+              why:"Ports imply services, and services imply what an organisation actually runs.",
+              ex:"port:3389",
+              pit:"Reflects Shodan's last scan, which may be weeks old. A closed port here may be open now, and the reverse."},
+  hostname:  {key:"hostname", label:"hostname:", ph:"example.com",
+              what:"Match on the resolved hostname.",
+              why:"Ties scanned infrastructure back to a named domain.",
+              ex:"hostname:example.com",
+              pit:"Depends on reverse DNS being set. Plenty of hosts have none and will be missed."},
+  sh_org:    {key:"org", label:"org:", ph:"Example Ltd",
+              what:"Match the organisation that owns the IP range.",
+              why:"Finds infrastructure by owner rather than by name, which catches hosts that carry no branding.",
+              ex:"org:\"Example Ltd\"",
+              pit:"This is the WHOIS registrant of the netblock, often a hosting provider rather than your target."},
+  country:   {key:"country", label:"country:", ph:"GB",
+              what:"Restrict to a country, by two-letter code.",
+              why:"Useful for separating a regional footprint from a global one.",
+              ex:"country:DE",
+              pit:"Geolocation of IPs is approximate and frequently wrong for cloud ranges."},
+  net:       {key:"net", label:"net:", ph:"93.184.216.0/24",
+              what:"Restrict to a CIDR range.",
+              why:"Once you know an organisation's netblock, this enumerates everything scanned inside it.",
+              ex:"net:93.184.216.0/24",
+              pit:"Only covers what Shodan has scanned, which is never the whole range."},
+  product:   {key:"product", label:"product:", ph:"nginx",
+              what:"Match detected software.",
+              why:"Identifies the technology stack without touching the host yourself.",
+              ex:"product:nginx",
+              pit:"Banner-based, so it is trivially spoofed and often stale."},
+  httptitle: {key:"intitle", label:"http.title:", ph:"Login",
+              what:"Match the HTML title of the served page.",
+              why:"Default titles betray unconfigured appliances, admin panels and dashboards.",
+              ex:"http.title:\"Dashboard\"",
+              pit:"Only captured for hosts Shodan fetched HTTP from."}
+};
+
+var ENGINES = {
+  google: {
+    name:"Google", url:"https://www.google.com/search?q=", passive:true,
+    note:"The deepest operator set of any general engine. Assume every operator below works, but that Google may quietly relax your query if it returns too little.",
+    ops:["site","filetype","ext","inurl","intitle","intext"],
+    extras:["exact","exclude","or","paren","wild","dates"]
+  },
+  bing: {
+    name:"Bing", url:"https://www.bing.com/search?q=", passive:true,
+    note:"Worth using specifically for <b>ip:</b> and <b>contains:</b>, which Google has no equivalent for. Its index differs from Google's, so the same query returns different pages — that is a feature, not a fault.",
+    ops:["site","filetype","inurl","intitle","inbody","ip","language","contains","url"],
+    extras:["exact","exclude","or","paren"]
+  },
+  ddg: {
+    name:"DuckDuckGo", url:"https://duckduckgo.com/?q=", passive:true,
+    note:"Thinner operator support than it appears. Unsupported operators are <b>silently ignored</b> rather than rejected, so a query can look precise and be doing almost nothing.",
+    ops:["site","filetype","intitle","inurl"],
+    extras:["exact","exclude","or"]
+  },
+  github: {
+    name:"GitHub code", url:"https://github.com/search?type=code&q=", passive:true,
+    note:"Code search requires you to be <b>signed in</b>. The syntax was rewritten in 2023 — <b>path:</b> replaced the old filename: and extension: operators, so older dorking guides will not work.",
+    ops:["repo","org","user","path","gh_lang","content"],
+    extras:["exact","exclude","or","paren"]
+  },
+  shodan: {
+    name:"Shodan", url:"https://www.shodan.io/search?query=", passive:true,
+    note:"You are searching Shodan's <b>existing scan data</b>, not scanning anything yourself — the query stays passive. Results are as old as their last scan of that host.",
+    ops:["port","hostname","sh_org","country","net","product","httptitle"],
+    extras:["exact","exclude"]
+  }
+};
+
+var EXTRAS = {
+  exact:  {label:"\"exact phrase\"", what:"Force words to appear together in this order.",
+           why:"Turns a bag of loosely related words into one specific string. The difference between finding a topic and finding a document.",
+           ex:"\"internal use only\"",
+           pit:"Quoting a single word does almost nothing — it only suppresses synonym expansion."},
+  exclude:{label:"-exclude", what:"Remove results containing a word.",
+           why:"The fastest way to clear a dominant but irrelevant result set once you see what is crowding the page.",
+           ex:"-jobs -careers",
+           pit:"Excluding too early hides results you have not seen yet. Run the query first, then subtract what is in the way."},
+  or:     {label:"OR", what:"Match either side.",
+           why:"Lets one query cover several domains, extensions or spellings at once.",
+           ex:"filetype:doc OR filetype:docx",
+           pit:"Must be uppercase. Lowercase \"or\" is treated as an ordinary word and your query silently means something else."},
+  paren:  {label:"( grouping )", what:"Control how AND and OR combine.",
+           why:"Without parentheses an OR binds loosely and can swallow the rest of the query.",
+           ex:"site:example.com (inurl:login OR inurl:admin)",
+           pit:"Ungrouped OR next to other operators is the most common reason a dork returns nonsense."},
+  wild:   {label:"* wildcard", what:"Stand in for one or more unknown words.",
+           why:"Useful when you know the shape of a phrase but not every word of it.",
+           ex:"\"annual * report 2024\"",
+           pit:"Only works inside a quoted phrase. It matches words, not characters — it is not a regex."},
+  dates:  {label:"before: / after:", what:"Limit to a publication date range.",
+           why:"Essential for pinning an event, and for cutting a decade of stale pages out of a common term.",
+           ex:"after:2024-01-01 before:2024-06-30",
+           pit:"Based on Google's <i>guess</i> at publication date, which is frequently wrong. Treat the boundary as soft."}
+};
+
+var RECIPES = [
+  {id:"docs", name:"Exposed documents", engines:["google","bing","ddg"],
+   goal:"Find documents an organisation published and forgot. Start broad with one extension, then widen with OR once you see what the site actually hosts.",
+   apply:function(s,d){ s.rows=[{op:"site",val:d||"example.com"},{op:"filetype",val:"pdf"}]; s.terms=""; s.exact=false; }},
+  {id:"dirlist", name:"Directory listings", engines:["google","bing","ddg"],
+   goal:"Open directory indexes expose whole folders at once. The title is a server default, which is exactly what makes it findable.",
+   apply:function(s,d){ s.rows=[{op:"intitle",val:"index of"}]; if(d) s.rows.push({op:"site",val:d}); s.terms=""; s.exact=false; }},
+  {id:"login", name:"Login & admin pages", engines:["google","bing","ddg"],
+   goal:"Applications name their own routes. Grouping several inurl: guesses with OR covers the common naming conventions in one pass.",
+   apply:function(s,d){ s.rows=[{op:"site",val:d||"example.com"},{op:"inurl",val:"admin"}]; s.terms=""; s.exact=false; }},
+  {id:"profiles", name:"Profiles for a handle", engines:["google","bing","ddg"],
+   goal:"Search the handle as an exact phrase so you get the account rather than every page that happens to use the word.",
+   apply:function(s){ s.terms="handle"; s.exact=true; s.rows=[{op:"site",val:"reddit.com"}]; }},
+  {id:"subs", name:"Subdomains", engines:["google","bing"],
+   goal:"Subtract the obvious host to surface the ones you did not know about. A cheap first pass before any dedicated subdomain tooling.",
+   apply:function(s,d){ s.rows=[{op:"site",val:d||"example.com"}]; s.exclude="www"; s.terms=""; s.exact=false; }},
+  {id:"emails", name:"Email addresses", engines:["google","bing"],
+   goal:"Search the domain as a literal string and push away the organisation's own site, so you find where staff addresses appear elsewhere.",
+   apply:function(s,d){ s.terms="@"+(d||"example.com"); s.exact=true; s.rows=[]; }},
+  {id:"secrets", name:"Config & secrets in code", engines:["github"],
+   goal:"Scope to an owner first. Unscoped code search is too noisy to read, and filenames follow convention closely enough to be a strong signal.",
+   apply:function(s,d){ s.rows=[{op:"org",val:(d||"example").split(".")[0]},{op:"path",val:"*.env"}]; s.terms=""; s.exact=false; }},
+  {id:"services", name:"Exposed services", engines:["shodan"],
+   goal:"Find infrastructure by who owns the address space rather than by name, then narrow by port once you see the shape of the estate.",
+   apply:function(s,d){ s.rows=[{op:"hostname",val:d||"example.com"}]; s.terms=""; s.exact=false; }},
+  {id:"cohosted", name:"Sites sharing an IP", engines:["bing"],
+   goal:"Shared hosting connects properties that otherwise hide their relationship. Bing is the only major engine that will answer this.",
+   apply:function(s){ s.rows=[{op:"ip",val:"93.184.216.34"}]; s.terms=""; s.exact=false; }}
+];
+
+/* ---------- state ---------- */
+var LS = "dorkbuilder.v1";
+var state = {engine:"google", terms:"", exact:false, exclude:"", rows:[{op:"site",val:""}], recipe:null, saved:[]};
+
+try{
+  var raw = localStorage.getItem(LS);
+  if(raw){ var p = JSON.parse(raw); if(p && p.saved) state.saved = p.saved; }
+}catch(e){}
+
+function persist(){
+  try{ localStorage.setItem(LS, JSON.stringify({saved:state.saved})); }catch(e){}
+}
+
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function toast(m){ var t=el("toast"); t.textContent=m; t.style.display="block"; clearTimeout(t._t); t._t=setTimeout(function(){t.style.display="none";},1900); }
+
+function eng(){ return ENGINES[state.engine]; }
+function opDef(name){ return OPS[name]; }
+function engSupports(name){ return eng().ops.indexOf(name) !== -1; }
+function hasExtra(x){ return eng().extras.indexOf(x) !== -1; }
+
+/* ---------- query build ---------- */
+function needsQuotes(v){ return /\s/.test(v) && !/^".*"$/.test(v); }
+
+function buildParts(){
+  var parts = [];
+  var t = state.terms.trim();
+  if(t){
+    if(state.exact && !/^".*"$/.test(t)){
+      parts.push({tk:'"'+t+'"', lb:"Exact phrase",
+        ds:"These words must appear together, in this order. Without the quotes the engine is free to match them scattered across the page."});
+    } else {
+      parts.push({tk:t, lb:"Search terms",
+        ds:"Matched loosely — the engine may reorder these, split them, or substitute synonyms."});
+    }
+  }
+  state.rows.forEach(function(r){
+    if(!r.op || !r.val.trim()) return;
+    var d = opDef(r.op); if(!d) return;
+    var v = r.val.trim();
+    if(needsQuotes(v)) v = '"'+v+'"';
+    var sup = engSupports(r.op);
+    parts.push({
+      tk: d.label + v,
+      lb: sup ? d.what : "NOT SUPPORTED on " + eng().name,
+      ds: sup ? d.why : "This operator does not exist on " + eng().name + ". It will be treated as ordinary search text, which quietly changes what you are asking for.",
+      bad: !sup
+    });
+  });
+  var ex = state.exclude.trim();
+  if(ex){
+    ex.split(/\s+/).forEach(function(w){
+      if(!w) return;
+      var c = w.charAt(0)==="-" ? w : "-"+w;
+      parts.push({tk:c, lb:"Exclusion",
+        ds:"Removes results containing this word. Subtracting too early hides results you have not looked at yet."});
+    });
+  }
+  return parts;
+}
+
+function buildQuery(){ return buildParts().map(function(p){return p.tk;}).join(" "); }
+
+/* ---------- pitfalls ---------- */
+function pitfalls(){
+  var out = [], parts = buildParts(), q = buildQuery();
+  var used = {}; state.rows.forEach(function(r){ if(r.op && r.val.trim()){ used[r.op]=(used[r.op]||0)+1; } });
+
+  var unsupported = state.rows.filter(function(r){ return r.op && r.val.trim() && !engSupports(r.op); });
+  if(unsupported.length){
+    out.push({cls:"hard", t:"Operator not supported here",
+      m:unsupported.map(function(r){return opDef(r.op).label;}).join(", ") + " " + (unsupported.length>1?"do":"does") +
+        " not work on " + eng().name + ". It will be read as plain text, so the query looks precise but is not. Switch engine or drop it."});
+  }
+  if((used.site||0) > 1){
+    out.push({cls:"", t:"Two site: operators cancel out",
+      m:"Multiple site: operators are combined with AND, and no page is on two domains at once, so this returns nothing. Use one site:, or put the alternatives in parentheses joined by OR."});
+  }
+  if((used.filetype||0) + (used.ext||0) > 1){
+    out.push({cls:"", t:"Two filetype: operators cancel out",
+      m:"A file has one extension, so ANDing two returns nothing. Chain them with OR instead: filetype:doc OR filetype:docx."});
+  }
+  if(used.ext && used.filetype){
+    out.push({cls:"", t:"ext: and filetype: are the same operator",
+      m:"You are using both names for one thing. Keep one."});
+  }
+  if(/\bor\b/.test(state.terms) && !/\bOR\b/.test(state.terms)){
+    out.push({cls:"", t:"Lowercase or is not an operator",
+      m:"Only uppercase OR alternates. Lowercase \"or\" is treated as an ordinary word, so the query means something different from what it looks like."});
+  }
+  if(/\bOR\b/.test(q) && q.indexOf("(") === -1 && hasExtra("paren")){
+    out.push({cls:"", t:"Ungrouped OR",
+      m:"OR binds loosely and can swallow the rest of the query. Wrap the alternatives in parentheses so the engine applies them where you meant."});
+  }
+  if(state.exact && state.terms.trim() && !/\s/.test(state.terms.trim())){
+    out.push({cls:"", t:"Quoting one word does little",
+      m:"Exact-phrase quoting matters for word order. On a single word it only suppresses synonym expansion — usually not worth it."});
+  }
+  var live = state.rows.filter(function(r){ return r.op && r.val.trim(); }).length;
+  if(live + (state.terms.trim()?1:0) >= 5){
+    out.push({cls:"", t:"Heavily constrained",
+      m:"Five or more constraints commonly returns zero. Zero results is not proof of absence — it is usually the query being too tight. Remove one constraint at a time."});
+  }
+  if(state.engine === "github" && !used.repo && !used.org && !used.user){
+    out.push({cls:"", t:"Unscoped code search",
+      m:"Without repo:, org: or user: you are searching all public code, which is far too noisy to read. Scope to an owner first."});
+  }
+  if(state.engine === "ddg" && live){
+    out.push({cls:"", t:"DuckDuckGo fails quietly",
+      m:"Unsupported operators are ignored rather than rejected here, so a query can look precise while doing almost nothing. Confirm anything important on another engine."});
+  }
+  if(state.engine === "shodan"){
+    out.push({cls:"ok", t:"This query stays passive",
+      m:"You are reading Shodan's existing scan data, not scanning anyone. The target sees nothing — until you visit a host you found."});
+  }
+  if(!q){
+    out.push({cls:"", t:"Nothing to run yet",
+      m:"Pick an objective above, or add a term and an operator. Every part you add narrows the result set — start loose and tighten."});
+  } else if(!out.length){
+    out.push({cls:"ok", t:"Nothing obviously wrong",
+      m:"No structural problems found. If it returns zero, loosen before you conclude the thing does not exist."});
+  }
+  return out;
+}
+
+/* ---------- render ---------- */
+function renderEngines(){
+  var h = "";
+  Object.keys(ENGINES).forEach(function(k){
+    h += '<button data-e="'+k+'" class="'+(state.engine===k?"on":"")+'">'+esc(ENGINES[k].name)+'</button>';
+  });
+  el("enginebar").innerHTML = h;
+  el("engnote").innerHTML = eng().note;
+}
+
+function renderRecipes(){
+  var h = "";
+  RECIPES.forEach(function(r){
+    if(r.engines.indexOf(state.engine) === -1) return;
+    h += '<button data-r="'+r.id+'" class="'+(state.recipe===r.id?"on":"")+'">'+esc(r.name)+'</button>';
+  });
+  if(!h) h = '<span style="font-size:12px;color:var(--dim)">No presets for this engine yet — build it by hand below.</span>';
+  el("recipes").innerHTML = h;
+  var rec = RECIPES.filter(function(r){return r.id===state.recipe;})[0];
+  el("goal").textContent = (rec && rec.engines.indexOf(state.engine)!==-1) ? rec.goal : "";
+}
+
+function renderRows(){
+  var h = "";
+  state.rows.forEach(function(r,i){
+    var sup = !r.op || engSupports(r.op);
+    h += '<div class="oprow'+(sup?"":" unsupported")+'"><select data-i="'+i+'" class="opsel">';
+    var seen = {};
+    eng().ops.forEach(function(o){
+      seen[o]=1;
+      h += '<option value="'+o+'"'+(r.op===o?" selected":"")+'>'+esc(OPS[o].label)+'</option>';
+    });
+    if(r.op && !seen[r.op]){
+      h += '<option value="'+r.op+'" selected>'+esc(OPS[r.op].label)+' (unsupported)</option>';
+    }
+    var ph = r.op && OPS[r.op] ? OPS[r.op].ph : "value";
+    h += '</select><input class="opval mono" data-i="'+i+'" value="'+esc(r.val)+'" placeholder="'+esc(ph)+'" autocomplete="off" spellcheck="false">';
+    h += '<button class="kill" data-i="'+i+'" title="Remove">&times;</button></div>';
+  });
+  el("oprows").innerHTML = h;
+}
+
+function renderQuery(){
+  var q = buildQuery();
+  el("qout").innerHTML = q ? esc(q) : '<span class="ph">your query will appear here</span>';
+  var n = buildParts().length;
+  el("count").textContent = n ? (n + (n===1?" part":" parts")) : "";
+}
+
+function renderAnat(){
+  var parts = buildParts();
+  if(!parts.length){
+    el("anat").innerHTML = '<div class="row"><div class="ds" style="grid-column:1/-1;color:var(--dim)">Add a term or an operator and each piece will be broken down here, with what it does and why it matters.</div></div>';
+    return;
+  }
+  var h = "";
+  parts.forEach(function(p){
+    h += '<div class="row"><div class="tk mono"'+(p.bad?' style="color:var(--mag)"':'')+'>'+esc(p.tk)+'</div>'+
+         '<div class="ds"><b>'+esc(p.lb)+'.</b> '+esc(p.ds)+'</div></div>';
+  });
+  el("anat").innerHTML = h;
+}
+
+function renderPitfalls(){
+  var h = "";
+  pitfalls().forEach(function(p){
+    h += '<div class="pit '+p.cls+'"><b>'+esc(p.t)+'</b>'+esc(p.m)+'</div>';
+  });
+  el("pitfalls").innerHTML = h;
+}
+
+var openOp = null;
+function renderOpRef(){
+  var h = "";
+  eng().ops.forEach(function(o){
+    var d = OPS[o], on = openOp===("op:"+o);
+    h += '<div class="opitem'+(on?" open":"")+'" data-op="op:'+o+'">'+
+         '<div class="k mono">'+esc(d.label)+'</div><div class="d">'+esc(d.what)+'</div>'+
+         '<div class="opdetail"><span class="lb">Why it matters</span>'+esc(d.why)+
+         '<span class="lb">Example</span><span class="ex mono">'+esc(d.ex)+'</span>'+
+         '<span class="lb">Watch out</span><span class="pf">'+esc(d.pit)+'</span></div></div>';
+  });
+  eng().extras.forEach(function(x){
+    var d = EXTRAS[x], on = openOp===("ex:"+x);
+    h += '<div class="opitem'+(on?" open":"")+'" data-op="ex:'+x+'">'+
+         '<div class="k mono">'+esc(d.label)+'</div><div class="d">'+esc(d.what)+'</div>'+
+         '<div class="opdetail"><span class="lb">Why it matters</span>'+esc(d.why)+
+         '<span class="lb">Example</span><span class="ex mono">'+esc(d.ex)+'</span>'+
+         '<span class="lb">Watch out</span><span class="pf">'+d.pit+'</span></div></div>';
+  });
+  el("opref").innerHTML = h;
+}
+
+function renderMatrix(){
+  /* which canonical capabilities each engine covers */
+  var caps = [
+    {key:"site",     name:"Restrict to a domain"},
+    {key:"filetype", name:"Restrict by file type"},
+    {key:"inurl",    name:"Match in URL"},
+    {key:"intitle",  name:"Match in title"},
+    {key:"intext",   name:"Match in body"},
+    {key:"ip",       name:"Find by IP"},
+    {key:"port",     name:"Find by open port"}
+  ];
+  var engs = Object.keys(ENGINES);
+  var h = "<tr><th>Capability</th>";
+  engs.forEach(function(e){ h += "<th>"+esc(ENGINES[e].name.split(" ")[0])+"</th>"; });
+  h += "</tr>";
+  caps.forEach(function(c){
+    h += "<tr><td>"+esc(c.name)+"</td>";
+    engs.forEach(function(e){
+      var match = ENGINES[e].ops.filter(function(o){ return OPS[o].key === c.key; });
+      if(!match.length){ h += '<td class="n">&mdash;</td>'; }
+      else {
+        var lbl = OPS[match[0]].label.replace(":","");
+        var canon = OPS[c.key] ? OPS[c.key].label.replace(":","") : c.key;
+        h += '<td class="'+(lbl===canon?"y":"alt")+'">'+esc(lbl)+'</td>';
+      }
+    });
+    h += "</tr>";
+  });
+  el("matrix").innerHTML = h;
+}
+
+function renderSaved(){
+  if(!state.saved.length){
+    el("savedlist").innerHTML = '<div class="empty">Nothing saved yet. Build a query and hit <b>Save query</b> to keep it here.</div>';
+    return;
+  }
+  var h = "";
+  state.saved.forEach(function(s,i){
+    h += '<div class="s"><div class="qq mono" data-load="'+i+'" title="Click to load">'+
+         '<span style="color:var(--dim)">'+esc(ENGINES[s.engine]?ENGINES[s.engine].name:s.engine)+'</span><br>'+esc(s.q)+'</div>'+
+         '<div class="x" data-del="'+i+'" title="Delete">&times;</div></div>';
+  });
+  el("savedlist").innerHTML = h;
+}
+
+function renderAll(){
+  renderEngines(); renderRecipes(); renderRows();
+  renderQuery(); renderAnat(); renderPitfalls();
+  renderOpRef(); renderMatrix(); renderSaved();
+  el("terms").value = state.terms;
+  el("exclude").value = state.exclude;
+  el("togexact").className = state.exact ? "on" : "";
+}
+
+/* ---------- events ---------- */
+el("enginebar").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-e]"); if(!b) return;
+  state.engine = b.getAttribute("data-e");
+  var rec = RECIPES.filter(function(r){return r.id===state.recipe;})[0];
+  if(rec && rec.engines.indexOf(state.engine) === -1) state.recipe = null;
+  /* an empty row carrying an operator the new engine lacks is just noise —
+     retarget it. A row with a value is left alone so the mismatch is visible
+     and the pitfall panel can explain it. */
+  state.rows = state.rows.map(function(r){
+    if(!r.val.trim() && !engSupports(r.op)) return {op:eng().ops[0], val:""};
+    return r;
+  });
+  openOp = null;
+  renderAll();
+});
+
+el("recipes").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-r]"); if(!b) return;
+  var id = b.getAttribute("data-r");
+  var rec = RECIPES.filter(function(r){return r.id===id;})[0]; if(!rec) return;
+  state.recipe = id;
+  state.exclude = "";
+  rec.apply(state, "");
+  renderAll();
+});
+
+el("oprows").addEventListener("change", function(e){
+  var s = e.target.closest("select.opsel"); if(!s) return;
+  state.rows[+s.getAttribute("data-i")].op = s.value;
+  renderAll();
+});
+el("oprows").addEventListener("input", function(e){
+  var i = e.target.closest("input.opval"); if(!i) return;
+  state.rows[+i.getAttribute("data-i")].val = i.value;
+  renderQuery(); renderAnat(); renderPitfalls();
+});
+el("oprows").addEventListener("click", function(e){
+  var k = e.target.closest("button.kill"); if(!k) return;
+  state.rows.splice(+k.getAttribute("data-i"), 1);
+  renderAll();
+});
+el("addop").addEventListener("click", function(){
+  state.rows.push({op:eng().ops[0], val:""});
+  renderAll();
+});
+
+el("terms").addEventListener("input", function(e){
+  state.terms = e.target.value;
+  renderQuery(); renderAnat(); renderPitfalls();
+});
+el("exclude").addEventListener("input", function(e){
+  state.exclude = e.target.value;
+  renderQuery(); renderAnat(); renderPitfalls();
+});
+el("togexact").addEventListener("click", function(){
+  state.exact = !state.exact;
+  el("togexact").className = state.exact ? "on" : "";
+  renderQuery(); renderAnat(); renderPitfalls();
+});
+
+el("opref").addEventListener("click", function(e){
+  var it = e.target.closest(".opitem"); if(!it) return;
+  var k = it.getAttribute("data-op");
+  openOp = (openOp === k) ? null : k;
+  renderOpRef();
+});
+
+el("copy").addEventListener("click", function(){
+  var q = buildQuery(); if(!q){ toast("Nothing to copy yet"); return; }
+  var b = el("copy");
+  function done(){ b.className="copybtn done"; b.textContent="COPIED"; setTimeout(function(){ b.className="copybtn"; b.textContent="COPY"; },1400); }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(q).then(done, function(){ fallbackCopy(q); done(); });
+  } else { fallbackCopy(q); done(); }
+});
+function fallbackCopy(t){
+  var a = document.createElement("textarea");
+  a.value = t; a.style.position="fixed"; a.style.opacity="0";
+  document.body.appendChild(a); a.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  document.body.removeChild(a);
+}
+
+el("run").addEventListener("click", function(){
+  var q = buildQuery(); if(!q){ toast("Build a query first"); return; }
+  window.open(eng().url + encodeURIComponent(q), "_blank", "noopener");
+});
+
+el("navsave").addEventListener("click", function(){
+  var q = buildQuery(); if(!q){ toast("Nothing to save yet"); return; }
+  /* store the whole build, not just the string, so loading restores the
+     builder rather than handing back text you cannot edit */
+  state.saved.unshift({
+    engine:state.engine, q:q,
+    terms:state.terms, exact:state.exact, exclude:state.exclude,
+    rows:state.rows.map(function(r){ return {op:r.op, val:r.val}; })
+  });
+  if(state.saved.length > 40) state.saved.pop();
+  persist(); renderSaved(); toast("Saved");
+});
+
+el("savedlist").addEventListener("click", function(e){
+  var d = e.target.closest("[data-del]");
+  if(d){ state.saved.splice(+d.getAttribute("data-del"),1); persist(); renderSaved(); return; }
+  var l = e.target.closest("[data-load]");
+  if(l){
+    var s = state.saved[+l.getAttribute("data-load")];
+    if(!s) return;
+    if(ENGINES[s.engine]) state.engine = s.engine;
+    state.terms   = s.terms || "";
+    state.exact   = !!s.exact;
+    state.exclude = s.exclude || "";
+    state.rows    = (s.rows && s.rows.length)
+      ? s.rows.map(function(r){ return {op:r.op, val:r.val}; })
+      : [{op:eng().ops[0], val:""}];
+    state.recipe = null;
+    renderAll();
+    toast("Loaded");
+  }
+});
+
+el("navclear").addEventListener("click", function(){
+  state.terms=""; state.exact=false; state.exclude=""; state.rows=[{op:eng().ops[0],val:""}]; state.recipe=null;
+  renderAll(); toast("Cleared");
+});
+
+renderAll();
+</script>
+</body>
+</html>
