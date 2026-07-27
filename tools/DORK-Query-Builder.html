@@ -110,8 +110,9 @@
   .anat .row .ds b{color:var(--txt);font-weight:600}
   @media(max-width:600px){.anat .row{grid-template-columns:1fr}.anat .row .tk{border-right:none;border-bottom:1px solid var(--line)}}
 
-  /* side panels */
-  .panelbox{border:1px solid var(--line);background:var(--panel);margin-bottom:18px}
+  /* side panels — long operator strings must wrap, not spill past the border */
+  .panelbox .body,.pit,.opitem,.opdetail,.matrix td,.matrix th,.anat .ds{overflow-wrap:break-word}
+  .panelbox{border:1px solid var(--line);background:var(--panel);margin-bottom:18px;overflow:hidden}
   .panelbox h3{margin:0;padding:10px 13px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--line);font-weight:600}
   .panelbox .body{padding:12px 13px;font-size:12.5px;color:var(--muted)}
   .panelbox .body p{margin:0 0 9px}
@@ -136,8 +137,8 @@
   .opitem.open .opdetail{display:block}
   .opdetail .lb{color:var(--dim);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;display:block;margin:7px 0 2px}
   .opdetail .lb:first-child{margin-top:0}
-  .opdetail .ex{color:var(--cyan)}
-  .opdetail .pf{color:var(--amber)}
+  .opdetail .ex{color:var(--cyan);display:block;overflow-wrap:anywhere;line-height:1.45}
+  .opdetail .pf{color:var(--amber);display:block}
 
   /* support matrix */
   .matrix{width:100%;border-collapse:collapse;font-size:11.5px}
@@ -385,6 +386,20 @@ var OPS = {
               pit:"Only captured for hosts Shodan fetched HTTP from."}
 };
 
+/* Operators where repeating the operator means "any of these", not "all of
+   these". A file has one extension and a page sits on one domain, so ANDing
+   repeats returns nothing — these get grouped with OR instead.
+   Operators NOT listed here can meaningfully AND: intitle:foo intitle:bar is a
+   title containing both words, and port:22 port:80 is a host with both open.
+   Those repeats are left exactly as typed. */
+var OR_MULTI = {site:1, filetype:1, ext:1, hostname:1, ip:1, net:1, url:1,
+                contains:1, country:1, language:1, gh_lang:1, product:1,
+                repo:1, org:1, sh_org:1, user:1, path:1};
+
+/* Operators whose value must be a bare host. A scheme or trailing slash
+   silently breaks them — site:https://example.com returns nothing. */
+var HOST_VAL = {site:1, hostname:1};
+
 var ENGINES = {
   google: {
     name:"Google", url:"https://www.google.com/search?q=", passive:true,
@@ -414,7 +429,7 @@ var ENGINES = {
     name:"Shodan", url:"https://www.shodan.io/search?query=", passive:true,
     note:"You are searching Shodan's <b>existing scan data</b>, not scanning anything yourself — the query stays passive. Results are as old as their last scan of that host.",
     ops:["port","hostname","sh_org","country","net","product","httptitle"],
-    extras:["exact","exclude"]
+    extras:["exact","exclude","or"]
   }
 };
 
@@ -500,6 +515,15 @@ function hasExtra(x){ return eng().extras.indexOf(x) !== -1; }
 /* ---------- query build ---------- */
 function needsQuotes(v){ return /\s/.test(v) && !/^".*"$/.test(v); }
 
+/* site: and hostname: want a bare host. Pasting a URL straight from the address
+   bar brings a scheme and a trailing slash with it, both of which break the
+   operator silently — the engine returns nothing and tells you nothing. */
+function cleanVal(op, v){
+  v = v.trim();
+  if(HOST_VAL[op]) v = v.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/+$/, "");
+  return v;
+}
+
 function buildParts(){
   var parts = [];
   var t = state.terms.trim();
@@ -512,18 +536,43 @@ function buildParts(){
         ds:"Matched loosely — the engine may reorder these, split them, or substitute synonyms."});
     }
   }
+  /* Group rows by operator first, so repeats of the same operator can be
+     handled together rather than emitted as a query that returns nothing. */
+  var groups = [], idx = {};
   state.rows.forEach(function(r){
     if(!r.op || !r.val.trim()) return;
-    var d = opDef(r.op); if(!d) return;
-    var v = r.val.trim();
-    if(needsQuotes(v)) v = '"'+v+'"';
-    var sup = engSupports(r.op);
-    parts.push({
-      tk: d.label + v,
-      lb: sup ? d.what : "NOT SUPPORTED on " + eng().name,
-      ds: sup ? d.why : "This operator does not exist on " + eng().name + ". It will be treated as ordinary search text, which quietly changes what you are asking for.",
-      bad: !sup
+    if(idx[r.op] === undefined){ idx[r.op] = groups.length; groups.push({op:r.op, vals:[]}); }
+    groups[idx[r.op]].vals.push(cleanVal(r.op, r.val));
+  });
+
+  groups.forEach(function(g){
+    var d = opDef(g.op); if(!d) return;
+    var sup = engSupports(g.op);
+    var unsupMsg = "This operator does not exist on " + eng().name +
+                   ". It will be treated as ordinary search text, which quietly changes what you are asking for.";
+    var toks = g.vals.filter(function(v){ return v; }).map(function(v){
+      return d.label + (needsQuotes(v) ? '"'+v+'"' : v);
     });
+    if(!toks.length) return;
+
+    if(toks.length > 1 && OR_MULTI[g.op] && hasExtra("or")){
+      parts.push({
+        tk: hasExtra("paren") ? "(" + toks.join(" OR ") + ")" : toks.join(" OR "),
+        lb: sup ? "Any of these " + d.label.replace(":","") + " values" : "NOT SUPPORTED on " + eng().name,
+        ds: sup ? "Repeating " + d.label + " would AND the values together and return nothing, because no single result can satisfy all of them at once. Grouped with OR so it means “any of these” instead — this is the pattern to reuse by hand."
+                : unsupMsg,
+        bad: !sup
+      });
+    } else {
+      toks.forEach(function(tk){
+        parts.push({
+          tk: tk,
+          lb: sup ? d.what : "NOT SUPPORTED on " + eng().name,
+          ds: sup ? d.why : unsupMsg,
+          bad: !sup
+        });
+      });
+    }
   });
   var ex = state.exclude.trim();
   if(ex){
@@ -550,13 +599,28 @@ function pitfalls(){
       m:unsupported.map(function(r){return opDef(r.op).label;}).join(", ") + " " + (unsupported.length>1?"do":"does") +
         " not work on " + eng().name + ". It will be read as plain text, so the query looks precise but is not. Switch engine or drop it."});
   }
-  if((used.site||0) > 1){
-    out.push({cls:"", t:"Two site: operators cancel out",
-      m:"Multiple site: operators are combined with AND, and no page is on two domains at once, so this returns nothing. Use one site:, or put the alternatives in parentheses joined by OR."});
+  var regrouped = [];
+  Object.keys(used).forEach(function(o){
+    if(used[o] > 1 && OR_MULTI[o] && hasExtra("or")) regrouped.push(OPS[o].label);
+  });
+  if(regrouped.length){
+    out.push({cls:"ok", t:"Repeats grouped with OR",
+      m:regrouped.join(", ") + " appears more than once. Repeating it would AND the values and return nothing, since no single result satisfies all of them at once — so the alternatives were grouped with OR to mean “any of these”. Copy that pattern when writing dorks by hand."});
   }
-  if((used.filetype||0) + (used.ext||0) > 1){
-    out.push({cls:"", t:"Two filetype: operators cancel out",
-      m:"A file has one extension, so ANDing two returns nothing. Chain them with OR instead: filetype:doc OR filetype:docx."});
+  var andRepeat = [];
+  Object.keys(used).forEach(function(o){ if(used[o] > 1 && !OR_MULTI[o]) andRepeat.push(OPS[o].label); });
+  if(andRepeat.length){
+    out.push({cls:"", t:"Repeats left as AND",
+      m:andRepeat.join(", ") + " is repeated and was left alone, because ANDing it is meaningful — a title can contain two words and a host can have two ports open. If you meant “either one”, that is not what this query asks."});
+  }
+  var schemed = state.rows.filter(function(r){ return r.op && HOST_VAL[r.op] && /:\/\//.test(r.val); });
+  if(schemed.length){
+    out.push({cls:"", t:"Scheme stripped from the domain",
+      m:"site: and hostname: take a bare domain — site:https://example.com returns nothing, and the engine will not tell you why. The scheme and any trailing slash were removed for you. Paste domains, not URLs."});
+  }
+  if(/\bOR\b/.test(q) && !hasExtra("paren") && parts.length > 2){
+    out.push({cls:"", t:"No grouping on this engine",
+      m:eng().name + " has no dependable parenthesis support, so an OR sitting beside other operators may bind more loosely than you intend. If the results look wrong, run the alternatives as separate searches."});
   }
   if(used.ext && used.filetype){
     out.push({cls:"", t:"ext: and filetype: are the same operator",
