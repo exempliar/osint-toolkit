@@ -9,7 +9,7 @@ The goal is not just to automate lookups. It is to teach the method behind them,
 | Tool | File | What it does |
 |------|------|--------------|
 | OSINT Learning Tool | [`tools/OSINT-Learning-Tool.html`](tools/OSINT-Learning-Tool.html) | Teaching-first pivot console. Type any indicator, learn where to look and why, get a model-agnostic AI prompt, paste findings back to extract pivots, and build an exportable case you can view as a node map. |
-| SONAR — Image OSINT Cockpit | [`tools/SONAR-OSINT-Cockpit.html`](tools/SONAR-OSINT-Cockpit.html) | Everything-from-a-picture cockpit. Drop an image, pull EXIF and OCR, copy a prompt to your AI, paste back to reconcile and pivot. Geolocation, transport visuals, and documents. |
+| SONAR — Image OSINT Cockpit | [`tools/SONAR-OSINT-Cockpit.html`](tools/SONAR-OSINT-Cockpit.html) | Everything-from-a-picture cockpit. Drop an image, pull EXIF and OCR, copy a prompt to your AI, paste back to reconcile and pivot. Geolocation, transport visuals, and documents. **Needs a connection on first load** — see [below](#one-thing-to-know-before-you-use-it). |
 | MANIFEST — Records Cockpit | [`tools/MANIFEST-Records-Cockpit.html`](tools/MANIFEST-Records-Cockpit.html) | The non-image companion to SONAR. Pick an entity type, drop the selector, and get targeted registry and tracker lookups, a prompt tuned per type, first moves, and a findings log. |
 | DORK — Query Builder | [`tools/DORK-Query-Builder.html`](tools/DORK-Query-Builder.html) | Compose search queries across five engines with every operator explained as it goes in. Anatomy breakdown, cross-engine support matrix, and a checker for the mistakes that silently break a dork. |
 
@@ -18,13 +18,12 @@ More tools will land here over time. See the [roadmap](#roadmap).
 ## Repository layout
 
 ```
-index.html        Landing page listing every tool. Open it to browse the toolkit.
 tools/            One self-contained HTML file per tool.
 CONTRIBUTING.md   House style and conventions for adding a tool.
 LICENSE           MIT.
 ```
 
-Open `index.html` by double-click to browse everything, or go straight to a file in `tools/`. Both work offline from disk.
+Pick a tool from the table above, download the one file, and open it by double-click. Nothing else is needed — each tool is independent and runs offline from disk.
 
 To grab the whole repo:
 
