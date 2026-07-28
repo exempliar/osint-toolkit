@@ -194,10 +194,15 @@
   .opdetail .ex{color:var(--cyan);display:block;overflow-wrap:anywhere;line-height:1.45}
   .opdetail .pf{color:var(--amber);display:block}
 
-  /* support matrix */
+  /* support matrix — six columns in a 400px rail, so it is the one table here
+     that can outgrow its panel. Tightened to fit, and allowed to scroll rather
+     than be clipped by .panelbox{overflow:hidden} if it ever does not. */
+  .matrixwrap{overflow-x:auto}
   .matrix{width:100%;border-collapse:collapse;font-size:11.5px}
-  .matrix th{text-align:left;padding:7px 9px;color:var(--dim);font-weight:600;font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--line)}
-  .matrix td{padding:6px 9px;border-bottom:1px solid var(--line);color:var(--muted)}
+  .matrix th{text-align:left;padding:7px 6px;color:var(--dim);font-weight:600;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;border-bottom:1px solid var(--line);white-space:nowrap}
+  .matrix td{padding:6px 6px;border-bottom:1px solid var(--line);color:var(--muted)}
+  .matrix td:first-child,.matrix th:first-child{padding-left:13px}
+  .matrix td:last-child,.matrix th:last-child{padding-right:13px}
   .matrix tr:last-child td{border-bottom:none}
   .matrix .y{color:var(--green)}
   .matrix .n{color:var(--dim)}
@@ -294,7 +299,7 @@
 
       <div class="panelbox">
         <h3 id="matrixhead">Support across engines</h3>
-        <div class="body" style="padding:0">
+        <div class="body matrixwrap" style="padding:0">
           <table class="matrix" id="matrix"></table>
         </div>
       </div>
@@ -508,31 +513,31 @@ var HOST_VAL = {site:1, hostname:1};
 
 var ENGINES = {
   google: {
-    name:"Google", url:"https://www.google.com/search?q=", passive:true,
+    name:"Google", abbr:"Google", url:"https://www.google.com/search?q=", passive:true,
     note:"The deepest operator set of any general engine. Assume every operator below works, but that Google may quietly relax your query if it returns too little.",
     ops:["site","filetype","ext","inurl","intitle","intext"],
     extras:["exact","exclude","or","paren","wild","dates"]
   },
   bing: {
-    name:"Bing", url:"https://www.bing.com/search?q=", passive:true,
+    name:"Bing", abbr:"Bing", url:"https://www.bing.com/search?q=", passive:true,
     note:"Worth using specifically for <b>ip:</b> and <b>contains:</b>, which Google has no equivalent for. Its index differs from Google's, so the same query returns different pages — that is a feature, not a fault.",
     ops:["site","filetype","inurl","intitle","inbody","ip","language","contains","url"],
     extras:["exact","exclude","or","paren"]
   },
   ddg: {
-    name:"DuckDuckGo", url:"https://duckduckgo.com/?q=", passive:true,
+    name:"DuckDuckGo", abbr:"DDG", url:"https://duckduckgo.com/?q=", passive:true,
     note:"Thinner operator support than it appears. Unsupported operators are <b>silently ignored</b> rather than rejected, so a query can look precise and be doing almost nothing.",
     ops:["site","filetype","intitle","inurl"],
     extras:["exact","exclude","or"]
   },
   github: {
-    name:"GitHub code", url:"https://github.com/search?type=code&q=", passive:true,
+    name:"GitHub code", abbr:"GitHub", url:"https://github.com/search?type=code&q=", passive:true,
     note:"Code search requires you to be <b>signed in</b>. The syntax was rewritten in 2023 — <b>path:</b> replaced the old filename: and extension: operators, so older dorking guides will not work.",
     ops:["repo","org","user","path","gh_lang","content"],
     extras:["exact","exclude","or","paren"]
   },
   shodan: {
-    name:"Shodan", url:"https://www.shodan.io/search?query=", passive:true,
+    name:"Shodan", abbr:"Shodan", url:"https://www.shodan.io/search?query=", passive:true,
     note:"You are searching Shodan's <b>existing scan data</b>, not scanning anything yourself — the query stays passive. Results are as old as their last scan of that host.",
     ops:["port","hostname","sh_org","country","net","product","httptitle"],
     extras:["exact","exclude","or"]
@@ -877,7 +882,7 @@ function renderMatrix(){
   ];
   var engs = Object.keys(ENGINES);
   var h = "<tr><th>Capability</th>";
-  engs.forEach(function(e){ h += "<th>"+esc(ENGINES[e].name.split(" ")[0])+"</th>"; });
+  engs.forEach(function(e){ h += '<th title="'+esc(ENGINES[e].name)+'">'+esc(ENGINES[e].abbr)+"</th>"; });
   h += "</tr>";
   caps.forEach(function(c){
     h += "<tr><td>"+esc(c.name)+"</td>";
