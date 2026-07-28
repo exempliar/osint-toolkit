@@ -22,13 +22,17 @@ A tool that returns an answer is half a tool. A tool that shows *why* that is th
 ## Adding a tool
 
 1. Create `tools/Your-Tool-Name.html`, following the conventions above.
-2. Match the existing visual language so the toolkit reads as one system. Copy the `:root` custom properties from `tools/OSINT-Learning-Tool.html` rather than inventing a new palette:
-   - Background `#050507`, panels `#0d0d11` / `#101016`, borders `#1c1c24` / `#262630`
-   - Text `#e7e7ee`, muted `#8b8b98`, dim `#5a5a67`
-   - Cyan `#2fe4d4` is the primary accent; magenta `#ff5db1`, amber `#ffcf5c`, green `#7be88a` are secondary
-   - Square corners (`border-radius:0`), uppercase letterspaced section labels, monospace for indicators and file names
-3. Add a row to the table in `README.md`.
-4. If it completes or replaces a roadmap item, update the roadmap in `README.md`.
+2. **Copy the shared base stylesheet verbatim.** Every tool's `<style>` opens with a block marked `OSINT TOOLKIT — SHARED BASE`, running from `:root` down to the `/* controls */` group. That block is byte-identical in all four tools and is what makes them read as one system. Copy it from any existing tool, then write your tool-specific rules below it under a `TOOLNAME — tool-specific` heading. Do not edit the shared block for one tool alone — if it needs to change, change it in every file.
+
+   What the shared base gives you:
+   - **Tokens.** Background `#050507`, panels `#0d0d11` / `#101016`, borders `#1c1c24` / `#262630`, text `#e7e7ee`, muted `#8b8b98`, dim `#5a5a67`. Cyan `#2fe4d4` is the primary accent; magenta `#ff5db1`, amber `#ffcf5c`, green `#7be88a` are secondary. Square corners everywhere (`border-radius:0`).
+   - **Chrome.** `.wrap`, `header.top` with `.brand` / `.topnav`, the `.toolnav` switcher, `.section-label`, the `.cols` two-column grid, `.foot`, `.toast`.
+   - **Components.** `.card` (panel with an inline `.eyebrow` label) and `.panelbox` (panel with an `h3` header strip and a `.body`); `button.act` with `.primary` / `.ghost`, `.btnrow`, `.chips` / `.chip`, `.hint`.
+
+   Use these rather than inventing parallel ones. Uppercase letterspaced labels, monospace for indicators and file names.
+3. Add your tool to the `.toolnav` list in every other tool, and add the full list to your own with `class="here"` on your entry.
+4. Add a row to the table in `README.md`.
+5. If it completes or replaces a roadmap item, update the roadmap in `README.md`.
 
 ## Safety conventions
 

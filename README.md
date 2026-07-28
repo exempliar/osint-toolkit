@@ -25,6 +25,8 @@ LICENSE           MIT.
 
 Pick a tool from the table above, download the one file, and open it by double-click. Nothing else is needed — each tool is independent and runs offline from disk.
 
+Every tool carries a **Toolkit** switcher in its header linking to the other three. Those links resolve against the sibling files in the same folder, so they work once you have the whole `tools/` directory and do nothing if you grabbed a single file. Everything else in a tool works either way.
+
 To grab the whole repo:
 
 ```
