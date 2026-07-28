@@ -104,6 +104,12 @@
   .chip .k{color:var(--dim);font-size:10.5px}
   .hint{color:var(--dim);font-size:12px;margin-top:10px}
 
+  /* hand-off row — "send this selector to another tool" */
+  .sendto{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:11px;margin:10px 0 0}
+  .sendto .lb{color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-right:4px}
+  .sendto a,.sendto button{font-family:inherit;font-size:11px;letter-spacing:.5px;color:var(--muted);border:1px solid var(--line2);padding:4px 10px;cursor:pointer;text-decoration:none;background:transparent}
+  .sendto a:hover,.sendto button:hover{color:var(--cyan);border-color:var(--cyan);text-decoration:none}
+
   /* ============================================================
      OSINT LEARNING TOOL — tool-specific
      ============================================================ */
@@ -154,11 +160,12 @@
   .bbbar button{padding:8px 14px;font-size:12px;letter-spacing:.5px;color:var(--cyan);border-color:var(--cyandim)}
   #extracted{margin-top:12px;display:none}
   #extracted.on{display:block;border-top:1px solid var(--line)}
-  .exrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px}
+  .exrow{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:12px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px}
+  @media(max-width:620px){.exrow{grid-template-columns:auto 1fr;gap:8px 12px}}
   .exrow .ty{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);min-width:64px}
   .exrow .vl{color:var(--txt);word-break:break-all}
-  .exrow .go,.exrow .add{font-size:11px;letter-spacing:.5px;color:var(--muted);cursor:pointer;white-space:nowrap;border:1px solid var(--line2);padding:4px 9px}
-  .exrow .go:hover,.exrow .add:hover{color:var(--cyan);border-color:var(--cyan)}
+  .exrow .go,.exrow .add,.exrow .snd{font-size:11px;letter-spacing:.5px;color:var(--muted);cursor:pointer;white-space:nowrap;border:1px solid var(--line2);padding:4px 9px;text-align:center}
+  .exrow .go:hover,.exrow .add:hover,.exrow .snd:hover{color:var(--cyan);border-color:var(--cyan)}
   .exrow .add.in{color:var(--green);border-color:var(--green)}
 
   /* list */
@@ -269,7 +276,14 @@
   </div>
 
   <p class="frameline" id="frame"></p>
-  <div style="margin:-12px 2px 22px"><button id="addcase" style="padding:6px 12px;font-size:11.5px;letter-spacing:.5px;color:var(--muted)">+ Add this value to case</button></div>
+  <div style="margin:-12px 2px 22px;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+    <button id="addcase" style="padding:6px 12px;font-size:11.5px;letter-spacing:.5px;color:var(--muted)">+ Add this value to case</button>
+    <span class="sendto" style="margin:0">
+      <span class="lb">Send to</span>
+      <button id="send-manifest">Manifest &rarr;</button>
+      <button id="send-dork">Dork &rarr;</button>
+    </span>
+  </div>
 
   <div class="cols">
     <div class="main">
@@ -388,6 +402,50 @@
 
 <script>
 "use strict";
+
+/* ============================================================
+   OSINT TOOLKIT — SHARED HANDOFF
+   Identical in every tool in tools/. Tools hand each other a
+   selector through the URL fragment, so it works straight from
+   disk with no storage and no network:
+       Tool.html#q=<value>&t=<type>
+   Change it here, change it in the others too.
+   ============================================================ */
+var TOOLKIT = {
+  files:{learning:"OSINT-Learning-Tool.html", dork:"DORK-Query-Builder.html",
+         sonar:"SONAR-OSINT-Cockpit.html",    manifest:"MANIFEST-Records-Cockpit.html"},
+  /* canonical selector types; each tool maps these onto its own vocabulary */
+  alias:{handle:"username", user:"username", infra:"domain", host:"domain",
+         hostname:"domain", org:"company", name:"person", wallet:"crypto", tel:"phone"},
+  read:function(){
+    var h = String(location.hash || "").replace(/^#/, "");
+    if(!h) return null;
+    var p = {};
+    h.split("&").forEach(function(kv){
+      var i = kv.indexOf("="); if(i < 0) return;
+      try{ p[decodeURIComponent(kv.slice(0,i))] = decodeURIComponent(kv.slice(i+1).replace(/\+/g," ")); }catch(e){}
+    });
+    if(!p.q) return null;
+    var t = p.t ? String(p.t).toLowerCase() : "";
+    return {q:p.q, t:TOOLKIT.alias[t] || t};
+  },
+  url:function(tool, q, t){
+    var f = TOOLKIT.files[tool]; if(!f) return "#";
+    return f + "#q=" + encodeURIComponent(q) + (t ? "&t=" + encodeURIComponent(t) : "");
+  },
+  send:function(tool, q, t){
+    q = (q == null ? "" : String(q)).trim();
+    if(!q) return false;
+    /* an anchor click rather than window.open — popup blockers and the
+       file:// origin both treat it more kindly */
+    var a = document.createElement("a");
+    a.href = TOOLKIT.url(tool, q, t); a.target = "_blank"; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    return true;
+  }
+};
+
+
 
 /* ---------------- DATA ---------------- */
 
@@ -813,8 +871,10 @@ function renderExtracted(found){
     row.innerHTML='<span class="ty">'+esc(INDICATORS[it.type]?INDICATORS[it.type].label:it.type)+'</span>'+
       '<span class="vl">'+esc(it.value)+'</span>'+
       '<span class="go">investigate</span>'+
+      '<span class="snd">manifest &rarr;</span>'+
       '<span class="add'+(inCase?' in':'')+'">'+(inCase?'in case':'+ case')+'</span>';
     row.querySelector(".go").onclick=function(){ investigate(it.value); };
+    row.querySelector(".snd").onclick=function(){ TOOLKIT.send("manifest",it.value,it.type); };
     row.querySelector(".add").onclick=function(){ caseAddEntity(it.value,it.type); renderExtracted(found); };
     box.appendChild(row);
   });
@@ -941,13 +1001,31 @@ function init(){
 
   el("memstatus").textContent = MEM_OK ? "Memory on (this browser)." : "Memory off (private mode). Still fully usable.";
 
+  el("send-manifest").onclick=function(){ if(!TOOLKIT.send("manifest", state.value, state.type)) flash("Type a value first"); };
+  el("send-dork").onclick=function(){ if(!TOOLKIT.send("dork", state.value, state.type)) flash("Type a value first"); };
+
   renderTradecraft();
   renderCase();
   renderFavorites();
   // restore last type only if no value
   var lt=memGet("olt_lastType",null); if(lt && INDICATORS[lt]) state.type=lt;
+
+  // hand-off in: an incoming selector beats the remembered type
+  var h=TOOLKIT.read();
+  if(h){
+    el("q").value=h.q; state.value=h.q;
+    state.type=(h.t && INDICATORS[h.t]) ? h.t : detect(h.q);
+    state.selected=null;
+  }
+
   refreshAll(false);
   el("q").focus();
+}
+
+function flash(msg){
+  var n=el("extractnote"); if(!n) return;
+  var prev=n.textContent; n.textContent=msg;
+  setTimeout(function(){ n.textContent=prev; },1600);
 }
 
 document.addEventListener("DOMContentLoaded", init);

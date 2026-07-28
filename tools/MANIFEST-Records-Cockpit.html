@@ -104,6 +104,12 @@
   .chip .k{color:var(--dim);font-size:10.5px}
   .hint{color:var(--dim);font-size:12px;margin-top:10px}
 
+  /* hand-off row — "send this selector to another tool" */
+  .sendto{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:11px;margin:10px 0 0}
+  .sendto .lb{color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-right:4px}
+  .sendto a,.sendto button{font-family:inherit;font-size:11px;letter-spacing:.5px;color:var(--muted);border:1px solid var(--line2);padding:4px 10px;cursor:pointer;text-decoration:none;background:transparent}
+  .sendto a:hover,.sendto button:hover{color:var(--cyan);border-color:var(--cyan);text-decoration:none}
+
   /* ============================================================
      MANIFEST — tool-specific
      ============================================================ */
@@ -172,6 +178,10 @@
         <button class="act primary" id="searchAll">Search all ↗</button>
       </div>
       <p class="curhint" id="curHint"></p>
+      <div class="sendto">
+        <span class="lb">Send this selector to</span>
+        <button id="send-dork">Dork &rarr;</button>
+      </div>
     </div>
 
     <div class="card">
@@ -229,6 +239,49 @@
 <div class="toast" id="toast"></div>
 
 <script>
+/* ============================================================
+   OSINT TOOLKIT — SHARED HANDOFF
+   Identical in every tool in tools/. Tools hand each other a
+   selector through the URL fragment, so it works straight from
+   disk with no storage and no network:
+       Tool.html#q=<value>&t=<type>
+   Change it here, change it in the others too.
+   ============================================================ */
+var TOOLKIT = {
+  files:{learning:"OSINT-Learning-Tool.html", dork:"DORK-Query-Builder.html",
+         sonar:"SONAR-OSINT-Cockpit.html",    manifest:"MANIFEST-Records-Cockpit.html"},
+  /* canonical selector types; each tool maps these onto its own vocabulary */
+  alias:{handle:"username", user:"username", infra:"domain", host:"domain",
+         hostname:"domain", org:"company", name:"person", wallet:"crypto", tel:"phone"},
+  read:function(){
+    var h = String(location.hash || "").replace(/^#/, "");
+    if(!h) return null;
+    var p = {};
+    h.split("&").forEach(function(kv){
+      var i = kv.indexOf("="); if(i < 0) return;
+      try{ p[decodeURIComponent(kv.slice(0,i))] = decodeURIComponent(kv.slice(i+1).replace(/\+/g," ")); }catch(e){}
+    });
+    if(!p.q) return null;
+    var t = p.t ? String(p.t).toLowerCase() : "";
+    return {q:p.q, t:TOOLKIT.alias[t] || t};
+  },
+  url:function(tool, q, t){
+    var f = TOOLKIT.files[tool]; if(!f) return "#";
+    return f + "#q=" + encodeURIComponent(q) + (t ? "&t=" + encodeURIComponent(t) : "");
+  },
+  send:function(tool, q, t){
+    q = (q == null ? "" : String(q)).trim();
+    if(!q) return false;
+    /* an anchor click rather than window.open — popup blockers and the
+       file:// origin both treat it more kindly */
+    var a = document.createElement("a");
+    a.href = TOOLKIT.url(tool, q, t); a.target = "_blank"; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    return true;
+  }
+};
+
+
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const enc=encodeURIComponent;
 function open_(u){window.open(u,"_blank","noopener");}
@@ -513,8 +566,24 @@ $("#copySummary").addEventListener("click",()=>{
 });
 $("#clearNotes").addEventListener("click",()=>{$("#notes").value="";store.set("manifest_notes","");});
 
+/* hand-off out */
+$("#send-dork").addEventListener("click",()=>{
+  if(!TOOLKIT.send("dork",$("#sel").value,cur)) toast("Enter a selector first");
+});
+
 /* init */
 setType(store.get("manifest_type","person"));
+
+/* hand-off in — overrides the remembered type, since an incoming
+   selector is a deliberate choice and the stored one is just the last */
+(function(){
+  const h=TOOLKIT.read(); if(!h) return;
+  const map={domain:"infra", ip:"infra", url:"infra", username:"handle", crypto:"infra"};
+  const t=map[h.t]||h.t;
+  $("#sel").value=h.q;
+  if(TYPES[t]) setType(t);
+  else { renderSites(); $("#promptbox").textContent=currentPrompt(); }
+})();
 </script>
 </body>
 </html>
