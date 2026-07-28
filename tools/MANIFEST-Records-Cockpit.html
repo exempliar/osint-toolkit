@@ -216,10 +216,10 @@
       <p class="eyebrow"><span class="n">◆</span>Findings</p>
       <textarea id="notes" placeholder="Confirmed facts, new selectors, candidate answers…"></textarea>
       <div class="btnrow">
-        <button class="act primary" id="copyDiscord">Copy for Discord</button>
+        <button class="act primary" id="copySummary">Copy summary</button>
         <button class="act ghost" id="clearNotes">Clear</button>
       </div>
-      <p class="hint">Saved on this machine. The copy button tags the entity and selector for your channel.</p>
+      <p class="hint">Saved on this machine. The copy button tags the summary with the entity type and selector.</p>
     </div>
   </aside>
   </div>
@@ -256,7 +256,7 @@ const TYPES={
       "If you have an email or handle, that is your strong selector: run Sherlock (terminal) and WhatsMyName.",
       "Breach check any email in Have I Been Pwned; leaked data often carries the next pivot."],
     pivot:"Pivot: name → photo → reverse image → employer/school → colleagues → handle → accounts.",
-    prompt:`You are an OSINT people-research analyst. I am investigating this person for a sanctioned CTF challenge. Selector: "{Q}".
+    prompt:`You are an OSINT people-research analyst. I am investigating this person as part of an authorized investigation. Selector: "{Q}".
 
 Do not invent facts. For each claim give the reasoning and how to verify it.
 - Disambiguate: how many distinct people likely share this selector, and what secondary detail separates them.
@@ -280,9 +280,9 @@ SELECTORS: <semicolon-separated new selectors to pivot on, key=value: handle, em
     moves:["Registry first: OpenCorporates for officers, addresses, incorporation dates, then the national business registry for filings.",
       "Filings and money: SEC EDGAR (US), local tender/procurement portals for bids, annual reports for numbers.",
       "Ownership and risk: OpenSanctions and Aleph for links, sanctions, and leaks.",
-      "Read documents line by line: DIVER 'bid'/'expense' answers hide in a single row of a PDF or sheet."],
+      "Read documents line by line: the detail that matters often sits in a single row of a PDF or spreadsheet."],
     pivot:"Pivot: company → officers/address/phone → other companies at that address → beneficial owner.",
-    prompt:`You are a corporate OSINT analyst. Investigate this entity for a CTF challenge. Selector: "{Q}".
+    prompt:`You are a corporate OSINT analyst. Investigate this entity for an authorized investigation. Selector: "{Q}".
 
 No fabrication. Cite where each fact would be verified.
 - Where is it likely registered, and which registry would hold officers, address, and filings.
@@ -305,10 +305,10 @@ SELECTORS: <semicolon-separated, key=value: officer, address, reg_number, domain
       ["Google","https://www.google.com/search?q={q}+vessel+IMO"]],
     moves:["Name is weak, IMO number is the strong unique key. Get the IMO first, then everything keys off it.",
       "Live + history: MarineTraffic and VesselFinder for position, port calls, and past names.",
-      "Sanctions is a DIVER staple: run the vessel and its owner through OpenSanctions and OFAC SDN.",
+      "Always run sanctions: put the vessel and its owner through OpenSanctions and OFAC SDN.",
       "Flag, owner, manager, and name changes reveal evasion; Equasis ties them together."],
     pivot:"Pivot: name → IMO → owner/manager company → MANIFEST company mode → sanctions.",
-    prompt:`You are a maritime OSINT analyst. Identify and profile this vessel for a CTF challenge. Selector: "{Q}".
+    prompt:`You are a maritime OSINT analyst. Identify and profile this vessel for an authorized investigation. Selector: "{Q}".
 
 No guessing. Separate confirmed from inferred.
 - Resolve to an IMO number and note prior names/flags if any.
@@ -333,7 +333,7 @@ SELECTORS: <semicolon-separated, key=value: imo, mmsi, owner, manager, flag, cal
       "Track history: FR24 and ADS-B Exchange; filter to the photo's date/time to place the flight.",
       "Registration prefix reveals country (N=US, G=UK, JA=Japan, etc.)."],
     pivot:"Pivot: livery → registration → operator → route on the date → specific flight.",
-    prompt:`You are an aviation OSINT analyst. Identify this aircraft/flight for a CTF challenge. Selector: "{Q}".
+    prompt:`You are an aviation OSINT analyst. Identify this aircraft/flight for an authorized investigation. Selector: "{Q}".
 
 No fabrication. State confidence per claim.
 - Resolve registration/callsign to type, operator, and country from the prefix.
@@ -360,7 +360,7 @@ SELECTORS: <semicolon-separated, key=value: registration, type, operator, callsi
       "See what it served: Wayback and urlscan for past pages; Shodan for open services and banners.",
       "Passive by default; do not actively scan the target host."],
     pivot:"Pivot: domain → registrant email/name → other domains → subdomains → hosting/IP.",
-    prompt:`You are an infrastructure OSINT analyst. Profile this domain/host for a CTF challenge. Selector: "{Q}".
+    prompt:`You are an infrastructure OSINT analyst. Profile this domain/host for an authorized investigation. Selector: "{Q}".
 
 Passive sources only; no active scanning. No fabrication.
 - WHOIS/registration, historical registrant, and related domains.
@@ -385,7 +385,7 @@ SELECTORS: <semicolon-separated, key=value: registrant, email, ip, subdomain, re
       "Confirmed profile → mine it for new selectors: linked sites, other handles, an email, a real name.",
       "Try common variants and the {?} trick for near-matches."],
     pivot:"Pivot: handle → confirmed profiles → bio links/email/real name → new handles → re-run.",
-    prompt:`You are a username-OSINT analyst. Map this handle across the internet for a CTF challenge. Handle: "{Q}".
+    prompt:`You are a username-OSINT analyst. Map this handle across the internet for an authorized investigation. Handle: "{Q}".
 
 No fabrication; every candidate profile is a lead until verified.
 - Where this exact handle likely exists and how to confirm each (avoid false positives).
@@ -410,7 +410,7 @@ SELECTORS: <semicolon-separated, key=value: real_name, email, other_handle, link
       "Personnel → run the recon/person workflow; unit + rank insignia narrow identity.",
       "Public defense data and photo archives are fair game; observe only, stay passive."],
     pivot:"Pivot: asset photo → type/unit → home base → overhead imagery → date via imagery history.",
-    prompt:`You are a defense/military OSINT analyst. Identify this for a sanctioned CTF challenge. Selector/description: "{Q}".
+    prompt:`You are a defense/military OSINT analyst. Identify this for an authorized investigation. Selector/description: "{Q}".
 
 Passive, open sources only. No fabrication; give evidence per claim.
 - Identify the asset/unit/site from visible markings, silhouette, or insignia.
@@ -436,7 +436,7 @@ SELECTORS: <semicolon-separated, key=value: type, unit, base, country, hull_or_t
       "Match places over time with old maps and historical aerials.",
       "Corroborate a claimed date with a second independent source; watch date formats."],
     pivot:"Pivot: place/event → date → contemporaneous source → named people → records.",
-    prompt:`You are a historical-research OSINT analyst. Work this CTF challenge. Subject: "{Q}".
+    prompt:`You are a historical-research OSINT analyst. Research this subject. Subject: "{Q}".
 
 No fabrication; cite the source type for each fact and note confidence.
 - Establish the date/period and the key event or place.
@@ -505,11 +505,11 @@ $("#navprompt").addEventListener("click",()=>copyText(currentPrompt(),"Prompt co
 /* notes */
 $("#notes").value=store.get("manifest_notes","");
 $("#notes").addEventListener("input",()=>store.set("manifest_notes",$("#notes").value));
-$("#copyDiscord").addEventListener("click",()=>{
+$("#copySummary").addEventListener("click",()=>{
   const sel=$("#sel").value.trim(), notes=$("#notes").value.trim();
   let s=`**MANIFEST · ${TYPES[cur].label}${sel?" — "+sel:""}**\n`;
   if(notes)s+=notes;
-  copyText(s.trim(),"Copied for Discord");
+  copyText(s.trim(),"Summary copied");
 });
 $("#clearNotes").addEventListener("click",()=>{$("#notes").value="";store.set("manifest_notes","");});
 

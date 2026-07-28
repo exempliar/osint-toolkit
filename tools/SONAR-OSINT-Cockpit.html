@@ -239,14 +239,14 @@
   <section>
     <!-- 1. intake -->
     <div class="card">
-      <p class="eyebrow"><span class="n">01</span>Drop the challenge image</p>
+      <p class="eyebrow"><span class="n">01</span>Drop the image</p>
       <div class="drop" id="drop">
         <b>Drop an image here</b> or click to browse
         <small>Everything runs in your browser. Nothing is uploaded anywhere.</small>
       </div>
       <input type="file" id="file" accept="image/*" hidden />
       <div class="preview" id="preview">
-        <img id="pimg" alt="challenge" />
+        <img id="pimg" alt="the image being analysed" />
         <div class="meta">
           <div class="fname" id="fname"></div>
           <div class="dims" id="dims"></div>
@@ -348,14 +348,14 @@
       <div class="card notes">
         <p class="eyebrow">Case notes</p>
         <div class="search" style="margin-bottom:12px">
-          <input id="challName" placeholder="Challenge name" />
+          <input id="caseName" placeholder="Case name" />
         </div>
         <textarea id="notes" placeholder="Working notes, coordinates, candidate answers…"></textarea>
         <div class="btnrow">
-          <button class="act primary" id="copyDiscord">Copy for Discord</button>
+          <button class="act primary" id="copySummary">Copy summary</button>
           <button class="act ghost" id="clearNotes">Clear</button>
         </div>
-        <p class="hint">Copies a tidy summary (challenge, notes, and detected leads) ready to paste into your team channel.</p>
+        <p class="hint">Copies a tidy summary — case name, notes, and detected leads — ready to paste into your case file.</p>
       </div>
     </div>
   </aside>
@@ -372,7 +372,7 @@ let lastEntities=[];
 
 /* ---------------- prompts ---------------- */
 const PROMPTS={
-geo:`You are an elite OSINT geolocation analyst (top-tier GeoGuessr plus investigative journalist). I'll give you a CTF challenge image. Work out exactly where it was taken.
+geo:`You are an elite OSINT geolocation analyst (top-tier GeoGuessr plus investigative journalist). I'll give you an image from an authorized investigation. Work out exactly where it was taken.
 
 Reason from concrete evidence, not vibes:
 - Hemisphere/climate: vegetation, sun position + shadow direction, weather.
@@ -387,7 +387,7 @@ End with exactly two lines:
 NEXT: <the single best lead and the exact search query or site to try>
 ENTITIES: <semicolon-separated key=value using only these keys where found: country, city, place, coords, what3words, street, landmark, language>`,
 
-transport:`You are an aviation/rail/maritime OSINT identification expert. Identify the vehicle and, if possible, the exact service, from this CTF image.
+transport:`You are an aviation/rail/maritime OSINT identification expert. Identify the vehicle and, if possible, the exact service, from this image.
 
 Work the evidence:
 - Aircraft: airline livery/logo, type/model (winglets, engines, doors), visible registration or tail number, titles.
@@ -401,7 +401,7 @@ End with exactly two lines:
 NEXT: <the single best lookup and the exact site + query, e.g. FlightRadar24 filtered to reg XX-YYY on 2025-03-11>
 ENTITIES: <semicolon-separated key=value using only these keys where found: aircraft_reg, callsign, flight, airport, operator, ship, station, country, language>`,
 
-document:`You are a document and metadata OSINT analyst. Examine this CTF image/document for every extractable clue.
+document:`You are a document and metadata OSINT analyst. Examine this image/document for every extractable clue.
 
 Look for:
 - All visible text, transcribed and translated: headers, stamps, watermarks, handwriting, fine print.
@@ -415,7 +415,7 @@ End with exactly two lines:
 NEXT: <the single best thing to search or verify and how>
 ENTITIES: <semicolon-separated key=value using only these keys where found: org, person, place, country, date, url, reference, language>`,
 
-general:`You are a broad OSINT analyst. Pull every useful lead from this CTF image: what it shows, all text (transcribed + translated), people/places/objects/brands, and anything identifying. Give ranked hypotheses with evidence and confidence.
+general:`You are a broad OSINT analyst. Pull every useful lead from this image: what it shows, all text (transcribed + translated), people/places/objects/brands, and anything identifying. Give ranked hypotheses with evidence and confidence.
 
 End with exactly two lines:
 NEXT: <the best next step and exact query/site>
@@ -484,7 +484,7 @@ async function runAnalyze(){
   if(d.Software)row("Software",d.Software);
   if(d.Orientation)row("Orientation",String(d.Orientation));
   if(!d.latitude&&!d.DateTimeOriginal&&!d.Make&&!d.Software){
-    row("Metadata",has?"present but no GPS/camera/date":"none found (common — geo challenges are usually scrubbed; the visual clues are the game)");
+    row("Metadata",has?"present but no GPS/camera/date":"none found (common — anything posted to social media is stripped; read the visual clues instead)");
   }
 }
 
@@ -665,7 +665,7 @@ $("#playbook").innerHTML=`
 <li>Drop image → <b>Analyze</b> (metadata + OCR), then <b>Copy prompt</b>.</li>
 <li>Paste into Claude and ChatGPT, attach the image, send.</li>
 <li>Paste both replies into step 04 → <b>Compare</b> → chase the pivots.</li>
-<li>Drop findings in Discord with the Notes tab.</li>
+<li>Keep findings in the Notes tab and copy the summary into your case file.</li>
 </ul>
 <h4>Geolocation checklist</h4>
 <ul>
@@ -703,16 +703,16 @@ $("#playbook").innerHTML=`
 <li>Index/search: Ahmia (ahmia.fi) on clearnet to find onions.</li>
 </ul>`;
 
-/* ---------------- notes / discord ---------------- */
-$("#copyDiscord").addEventListener("click",()=>{
-  const name=$("#challName").value.trim()||"(challenge)";
+/* ---------------- notes / summary ---------------- */
+$("#copySummary").addEventListener("click",()=>{
+  const name=$("#caseName").value.trim()||"(untitled case)";
   const notes=$("#notes").value.trim();
   let s=`**${name}**\n`;
   if(notes)s+=notes+"\n";
   if(lastEntities.length)s+="\nLeads: "+lastEntities.join(" · ");
-  copyText(s.trim(),"Copied for Discord");
+  copyText(s.trim(),"Summary copied");
 });
-$("#clearNotes").addEventListener("click",()=>{$("#notes").value="";$("#challName").value="";});
+$("#clearNotes").addEventListener("click",()=>{$("#notes").value="";$("#caseName").value="";});
 
 /* ---------------- init ---------------- */
 setCat("geo");
