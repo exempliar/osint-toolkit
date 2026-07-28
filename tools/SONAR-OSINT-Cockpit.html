@@ -153,6 +153,21 @@
   .bar.show{display:block}
   .bar i{display:block;height:100%;width:0;background:var(--cyan);transition:width .2s}
 
+  /* OCR region picker — OCR degrades sharply the more of the frame it has to
+     read, so the single most useful control here is "read only this bit" */
+  .region{margin:16px 0 4px}
+  .regionlabel{font-size:12px;color:var(--muted);margin:0 0 8px;border-left:2px solid var(--cyandim);padding-left:10px}
+  .regionwrap{position:relative;display:inline-block;max-width:100%;border:1px solid var(--line2);background:var(--panel2);line-height:0;cursor:crosshair;user-select:none;touch-action:none}
+  .regionwrap img{display:block;max-width:100%;height:auto}
+  .selbox{position:absolute;border:1px solid var(--cyan);background:rgba(47,228,212,.14);display:none;pointer-events:none}
+  .selbox.on{display:block}
+  .regionbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:9px}
+  .regioninfo{font-size:12px;color:var(--dim)}
+  .regioninfo b{color:var(--cyan);font-weight:600}
+  .regioninfo .warn{color:var(--amber)}
+  .invchk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer}
+  .invchk input{accent-color:var(--cyan)}
+
   /* prompt */
   .promptbox{font-family:var(--mono);font-size:12px;white-space:pre-wrap;background:var(--panel2);border:1px solid var(--line2);border-top:1px solid var(--cyan);padding:12px 13px;color:#c6d7dd;max-height:220px;overflow:auto}
 
@@ -268,6 +283,20 @@
     <div class="card" id="signalsCard" style="display:none">
       <p class="eyebrow"><span class="n">02</span>Local signals</p>
       <dl class="kv" id="exif"></dl>
+
+      <div class="region" id="region">
+        <p class="regionlabel">Drag a box over the text you want read. OCR gets rapidly worse the more of the frame it has to look at &mdash; a busy photograph is mostly noise to it, and the noise drowns the few characters you actually want. Selecting the text is usually the difference between a clean read and gibberish.</p>
+        <div class="regionwrap" id="regionwrap">
+          <img id="rimg" alt="the image — drag over it to select a region to read" draggable="false" />
+          <div class="selbox" id="selbox"></div>
+        </div>
+        <div class="regionbar">
+          <span class="regioninfo" id="regioninfo">Reading the whole image.</span>
+          <label class="invchk" title="OCR is trained on dark text on a light page. Signage, screens and hull markings are usually the other way round."><input type="checkbox" id="ocrinvert"> Invert (light text on dark)</label>
+          <button class="act ghost" id="selclear" style="display:none">Whole image</button>
+        </div>
+      </div>
+
       <div class="langs" id="langs">
         <span style="color:var(--dim)">OCR languages:</span>
         <label><input type="checkbox" value="eng" checked> English</label>
@@ -499,6 +528,8 @@ function loadFile(f){
     const c=document.createElement("canvas");c.width=img.naturalWidth;c.height=img.naturalHeight;
     c.getContext("2d").drawImage(img,0,0);currentCanvas=c;
     $("#pimg").src=url;
+    $("#rimg").src=url;
+    clearRegion();
     $("#fname").textContent=f.name||"pasted-image.png";
     $("#dims").textContent=`${img.naturalWidth}×${img.naturalHeight}px · ${(f.size/1024).toFixed(0)} KB`;
     $("#preview").classList.add("show");
@@ -510,7 +541,91 @@ $("#clear").addEventListener("click",()=>{
   currentFile=currentImg=currentCanvas=null;
   $("#preview").classList.remove("show");drop.style.display="";
   $("#signalsCard").style.display="none";$("#ocrout").classList.remove("show");
+  clearRegion();
 });
+
+/* ---------------- OCR region selection ----------------
+   ocrRect is stored normalised (0..1) against the natural image, so it stays
+   correct when the preview is resized or the layout reflows. */
+let ocrRect=null;
+const rwrap=$("#regionwrap"), selbox=$("#selbox");
+let dragging=false, dragStart=null;
+
+function clearRegion(){
+  ocrRect=null;
+  selbox.classList.remove("on");
+  $("#selclear").style.display="none";
+  $("#regioninfo").textContent="Reading the whole image.";
+  $("#ocrbtn").textContent="Read text (OCR)";
+}
+
+function pointIn(e){
+  const r=rwrap.getBoundingClientRect();
+  return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),
+          y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))};
+}
+function paintBox(a,b){
+  const x=Math.min(a.x,b.x), y=Math.min(a.y,b.y);
+  const w=Math.abs(a.x-b.x), h=Math.abs(a.y-b.y);
+  selbox.style.left=(x*100)+"%"; selbox.style.top=(y*100)+"%";
+  selbox.style.width=(w*100)+"%"; selbox.style.height=(h*100)+"%";
+  selbox.classList.add("on");
+  return {x:x,y:y,w:w,h:h};
+}
+rwrap.addEventListener("pointerdown",e=>{
+  if(!currentCanvas)return;
+  dragging=true; dragStart=pointIn(e);
+  rwrap.setPointerCapture(e.pointerId);
+  paintBox(dragStart,dragStart);
+});
+rwrap.addEventListener("pointermove",e=>{ if(dragging) paintBox(dragStart,pointIn(e)); });
+rwrap.addEventListener("pointerup",e=>{
+  if(!dragging)return;
+  dragging=false;
+  const r=paintBox(dragStart,pointIn(e));
+  /* a click rather than a drag means "never mind", not "read four pixels" */
+  if(r.w<0.01||r.h<0.01){ clearRegion(); return; }
+  ocrRect=r;
+  const W=currentCanvas.width,H=currentCanvas.height;
+  const px=Math.round(r.w*W), py=Math.round(r.h*H);
+  const pct=(r.w*r.h*100);
+  $("#selclear").style.display="";
+  $("#ocrbtn").textContent="Read selected region";
+  $("#regioninfo").innerHTML="Reading <b>"+px+"×"+py+"px</b> — "+
+    (pct<0.5?pct.toFixed(2):pct.toFixed(1))+"% of the frame."+
+    (px<40||py<12?" <span class=\"warn\">That is very small; the read may still fail.</span>":"");
+});
+$("#selclear").addEventListener("click",clearRegion);
+
+/* Build what actually gets handed to Tesseract. Crop at full resolution, then
+   enlarge — small text reads far better scaled up than as raw pixels. Note that
+   enlarging cannot recover detail that was never captured: if a glyph is only a
+   few pixels tall in the original, interpolation will not save it. */
+function ocrTarget(){
+  if(!currentCanvas)return currentFile;
+  const invert=$("#ocrinvert").checked;
+  if(!ocrRect && !invert) return currentFile;   // nothing to do, hand over the file
+
+  const W=currentCanvas.width,H=currentCanvas.height;
+  const sx=ocrRect?Math.round(ocrRect.x*W):0, sy=ocrRect?Math.round(ocrRect.y*H):0;
+  const sw=ocrRect?Math.max(1,Math.min(Math.round(ocrRect.w*W),W-sx)):W;
+  const sh=ocrRect?Math.max(1,Math.min(Math.round(ocrRect.h*H),H-sy)):H;
+  const scale=ocrRect?Math.min(8,Math.max(1,2000/sw)):1;
+
+  const c=document.createElement("canvas");
+  c.width=Math.round(sw*scale); c.height=Math.round(sh*scale);
+  const ctx=c.getContext("2d");
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+  ctx.drawImage(currentCanvas,sx,sy,sw,sh,0,0,c.width,c.height);
+
+  if(invert){
+    const d=ctx.getImageData(0,0,c.width,c.height);
+    const p=d.data;
+    for(let i=0;i<p.length;i+=4){ p[i]=255-p[i]; p[i+1]=255-p[i+1]; p[i+2]=255-p[i+2]; }
+    ctx.putImageData(d,0,0);
+  }
+  return c;
+}
 
 /* ---------------- analyze / EXIF ---------------- */
 $("#analyze").addEventListener("click",runAnalyze);
@@ -544,14 +659,19 @@ async function runOCR(){
   const langs=$$("#langs input:checked").map(c=>c.value);
   if(!langs.length){toast("Pick at least one language");return;}
   const bar=$("#ocrbar"),fill=bar.querySelector("i"),out=$("#ocrout"),btn=$("#ocrbtn");
+  const label=ocrRect?"Read selected region":"Read text (OCR)";
+  const target=ocrTarget();
   bar.classList.add("show");fill.style.width="4%";btn.disabled=true;btn.textContent="Reading…";
   out.classList.remove("show");
   try{
-    const {data}=await Tesseract.recognize(currentFile,langs.join("+"),{logger:m=>{if(m.status==="recognizing text")fill.style.width=Math.max(4,m.progress*100)+"%";}});
-    out.textContent=(data.text||"").trim()||"(no text detected)";
+    const {data}=await Tesseract.recognize(target,langs.join("+"),{logger:m=>{if(m.status==="recognizing text")fill.style.width=Math.max(4,m.progress*100)+"%";}});
+    const txt=(data.text||"").trim();
+    out.textContent=txt||(ocrRect
+      ? "(no text detected in that region — try a tighter box around the text itself, or a larger one if you clipped it)"
+      : "(no text detected — if there is text in the frame, select just that part above and read again)");
     out.classList.add("show");
   }catch(e){out.textContent="OCR failed: "+e.message;out.classList.add("show");}
-  bar.classList.remove("show");fill.style.width="0";btn.disabled=false;btn.textContent="Read text (OCR)";
+  bar.classList.remove("show");fill.style.width="0";btn.disabled=false;btn.textContent=label;
 }
 
 /* ---------------- copy image ---------------- */

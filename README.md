@@ -72,6 +72,19 @@ Built for image work in three directions: geolocation, transport and vehicle vis
 
 **Teaches** what metadata does and does not prove, and how to pressure-test a confident AI reading against the evidence in the file.
 
+### Read only the part that matters
+
+OCR degrades sharply the more of a frame it has to look at. A busy photograph — a street, a container terminal, a crowd — is mostly noise to it, and the noise drowns the few characters you actually want. Run a full frame through and you often get pages of garbage with your answer nowhere in it.
+
+So drag a box over the text before you read. SONAR crops at full resolution and enlarges the crop before handing it to the OCR engine, which reads small text far better scaled up than as raw pixels.
+
+Two honest limits, because this is not magic:
+
+- **Enlarging cannot recover detail that was never captured.** If a glyph is only a few pixels tall in the original, no amount of interpolation will resolve it, and you will get a plausible wrong character rather than a blank.
+- **Widely letter-spaced text reads badly** regardless of size — the engine tends to lose it or split it.
+
+Treat any OCR digit you cannot see with your own eyes as a lead to verify, not a fact. There is also an **Invert** toggle for light-text-on-dark material, which sometimes helps and sometimes makes things worse; it is off by default and worth trying only when a read comes back poor.
+
 ### One thing to know before you use it
 
 SONAR is the only tool here that needs a network connection. It loads two open-source libraries when you open it — [`exifr`](https://github.com/MikeKovarik/exifr) for EXIF parsing and [`tesseract.js`](https://github.com/naptha/tesseract.js) for OCR — from a public CDN, because bundling Tesseract's OCR language data into a single file would push it into the megabytes.
