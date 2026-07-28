@@ -575,7 +575,9 @@ function paintBox(a,b){
 rwrap.addEventListener("pointerdown",e=>{
   if(!currentCanvas)return;
   dragging=true; dragStart=pointIn(e);
-  rwrap.setPointerCapture(e.pointerId);
+  /* capture keeps the drag alive if the pointer leaves the image, but some
+     pointer sources reject it — the drag still works without it */
+  try{ rwrap.setPointerCapture(e.pointerId); }catch(err){}
   paintBox(dragStart,dragStart);
 });
 rwrap.addEventListener("pointermove",e=>{ if(dragging) paintBox(dragStart,pointIn(e)); });
@@ -601,16 +603,20 @@ $("#selclear").addEventListener("click",clearRegion);
    enlarge — small text reads far better scaled up than as raw pixels. Note that
    enlarging cannot recover detail that was never captured: if a glyph is only a
    few pixels tall in the original, interpolation will not save it. */
-function ocrTarget(){
+function ocrTarget(prep){
   if(!currentCanvas)return currentFile;
   const invert=$("#ocrinvert").checked;
-  if(!ocrRect && !invert) return currentFile;   // nothing to do, hand over the file
+  if(!ocrRect && !invert && !prep) return currentFile;   // nothing to do, hand over the file
 
   const W=currentCanvas.width,H=currentCanvas.height;
   const sx=ocrRect?Math.round(ocrRect.x*W):0, sy=ocrRect?Math.round(ocrRect.y*H):0;
   const sw=ocrRect?Math.max(1,Math.min(Math.round(ocrRect.w*W),W-sx)):W;
   const sh=ocrRect?Math.max(1,Math.min(Math.round(ocrRect.h*H),H-sy)):H;
-  const scale=ocrRect?Math.min(8,Math.max(1,2000/sw)):1;
+  /* Scale to a working line height rather than a working width. Measured on a
+     small crop, 4x beat 8x, 12x and 16x — past a point the interpolation just
+     softens the glyph edges and accuracy falls again. Targeting ~110px of crop
+     height lands near that sweet spot for a line or two of text. */
+  const scale=ocrRect?Math.min(6,Math.max(1,110/sh)):1;
 
   const c=document.createElement("canvas");
   c.width=Math.round(sw*scale); c.height=Math.round(sh*scale);
@@ -618,6 +624,7 @@ function ocrTarget(){
   ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
   ctx.drawImage(currentCanvas,sx,sy,sw,sh,0,0,c.width,c.height);
 
+  if(prep) prep(ctx,c);
   if(invert){
     const d=ctx.getImageData(0,0,c.width,c.height);
     const p=d.data;
@@ -651,7 +658,46 @@ async function runAnalyze(){
   }
 }
 
-/* ---------------- OCR ---------------- */
+/* ---------------- OCR ----------------
+   A single OCR pass gives you one answer and no way to judge it. Change the
+   segmentation mode or the contrast and you often get a *different* answer,
+   equally confidently. On a small or low-resolution crop that is the normal
+   case, not the exception.
+
+   So when a region is selected we read it several ways and compare. Agreement
+   across passes is real evidence; disagreement tells you the characters are
+   being guessed, which is exactly what you need to know before you carry a
+   number into an investigation.
+
+   The three passes are chosen for spread rather than redundancy: a general
+   block read, a single-line read, and a raw-line read with the layout
+   heuristics switched off. The last one is what tends to survive on small
+   crops, where the first two often return nothing at all. */
+const OCR_PASSES=[
+  {name:"auto layout",  prep:null,        psm:"3"},   // Tesseract's own default
+  {name:"single line",  prep:grayscale,   psm:"7"},   // one line, contrast stretched
+  {name:"raw line",     prep:grayscale,   psm:"13"}   // no layout analysis, best on small text
+];
+
+function grayscale(ctx,c){
+  const d=ctx.getImageData(0,0,c.width,c.height),p=d.data;
+  let lo=255,hi=0;
+  for(let i=0;i<p.length;i+=4){
+    const g=(p[i]*0.299+p[i+1]*0.587+p[i+2]*0.114)|0;
+    p[i]=p[i+1]=p[i+2]=g;
+    if(g<lo)lo=g; if(g>hi)hi=g;
+  }
+  const range=Math.max(1,hi-lo);
+  for(let i=0;i<p.length;i+=4){
+    let v=(((p[i]-lo)/range)*255)|0; v=v<0?0:v>255?255:v;
+    p[i]=p[i+1]=p[i+2]=v;
+  }
+  ctx.putImageData(d,0,0);
+}
+
+const norm=s=>(s||"").replace(/\s+/g," ").trim();
+const digitsOf=s=>(norm(s).match(/\d{3,}/g)||[]).join(" ");
+
 $("#ocrbtn").addEventListener("click",runOCR);
 async function runOCR(){
   if(!currentFile){toast("Drop an image first");return;}
@@ -660,15 +706,54 @@ async function runOCR(){
   if(!langs.length){toast("Pick at least one language");return;}
   const bar=$("#ocrbar"),fill=bar.querySelector("i"),out=$("#ocrout"),btn=$("#ocrbtn");
   const label=ocrRect?"Read selected region":"Read text (OCR)";
-  const target=ocrTarget();
   bar.classList.add("show");fill.style.width="4%";btn.disabled=true;btn.textContent="Reading…";
   out.classList.remove("show");
+
   try{
-    const {data}=await Tesseract.recognize(target,langs.join("+"),{logger:m=>{if(m.status==="recognizing text")fill.style.width=Math.max(4,m.progress*100)+"%";}});
-    const txt=(data.text||"").trim();
-    out.textContent=txt||(ocrRect
-      ? "(no text detected in that region — try a tighter box around the text itself, or a larger one if you clipped it)"
-      : "(no text detected — if there is text in the frame, select just that part above and read again)");
+    if(!ocrRect){
+      /* whole frame: one pass. Several passes over a big image is slow, and a
+         full frame is the case where you should be selecting a region anyway. */
+      const {data}=await Tesseract.recognize(ocrTarget(),langs.join("+"),
+        {logger:m=>{if(m.status==="recognizing text")fill.style.width=Math.max(4,m.progress*100)+"%";}});
+      out.textContent=norm(data.text)||"(no text detected — if there is text in the frame, select just that part above and read again)";
+    } else {
+      const worker=await Tesseract.createWorker(langs.join("+"));
+      const reads=[];
+      try{
+        for(let i=0;i<OCR_PASSES.length;i++){
+          const p=OCR_PASSES[i];
+          btn.textContent="Reading "+(i+1)+"/"+OCR_PASSES.length+"…";
+          fill.style.width=Math.round((i/OCR_PASSES.length)*100+6)+"%";
+          await worker.setParameters({tessedit_pageseg_mode:p.psm});
+          const {data}=await worker.recognize(ocrTarget(p.prep));
+          reads.push({name:p.name,text:norm(data.text),conf:Math.round(data.confidence||0)});
+        }
+      } finally { await worker.terminate(); }
+
+      const texts=reads.map(r=>r.text).filter(Boolean);
+      const agreed=texts.length===reads.length && new Set(texts).size===1;
+      const digitSets=new Set(reads.map(r=>digitsOf(r.text)).filter(Boolean));
+
+      const spoke=reads.filter(r=>r.text);
+      const silent=reads.filter(r=>!r.text).map(r=>r.name);
+
+      if(!spoke.length){
+        out.textContent="(no text detected in that region — try a tighter box around the text itself, or a larger one if you clipped it)";
+      } else if(agreed){
+        out.textContent=texts[0]+"\n\n— all "+reads.length+" passes read this the same way, which is the strongest signal this tool can give you.";
+      } else if(spoke.length===1){
+        out.textContent=spoke[0].text+
+          "\n\n— only the \""+spoke[0].name+"\" pass found anything; "+silent.join(" and ")+
+          " read nothing here. One pass out of "+reads.length+" is weak evidence. Treat this as a lead to confirm, not a fact.";
+      } else {
+        let s="The passes disagreed. Each line below is the same pixels read a different way:\n\n";
+        spoke.forEach(r=>{ s+="  ["+r.name+"] "+r.text+"\n"; });
+        if(silent.length) s+="  ["+silent.join(", ")+"] read nothing\n";
+        s+="\n— Disagreement means the characters are being guessed, not read.";
+        if(digitSets.size>1) s+="\n— The digits differ between passes. Do not carry any number from here into your case without confirming it against a source that is not this photograph.";
+        out.textContent=s;
+      }
+    }
     out.classList.add("show");
   }catch(e){out.textContent="OCR failed: "+e.message;out.classList.add("show");}
   bar.classList.remove("show");fill.style.width="0";btn.disabled=false;btn.textContent=label;

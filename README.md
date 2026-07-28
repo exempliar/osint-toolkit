@@ -76,14 +76,32 @@ Built for image work in three directions: geolocation, transport and vehicle vis
 
 OCR degrades sharply the more of a frame it has to look at. A busy photograph — a street, a container terminal, a crowd — is mostly noise to it, and the noise drowns the few characters you actually want. Run a full frame through and you often get pages of garbage with your answer nowhere in it.
 
-So drag a box over the text before you read. SONAR crops at full resolution and enlarges the crop before handing it to the OCR engine, which reads small text far better scaled up than as raw pixels.
+So drag a box over the text before you read. SONAR crops at full resolution and rescales the crop to a working line height before handing it to the OCR engine.
 
-Two honest limits, because this is not magic:
+### It tells you when it is guessing
 
-- **Enlarging cannot recover detail that was never captured.** If a glyph is only a few pixels tall in the original, no amount of interpolation will resolve it, and you will get a plausible wrong character rather than a blank.
-- **Widely letter-spaced text reads badly** regardless of size — the engine tends to lose it or split it.
+A single OCR pass gives you one answer and no way to judge it. Change the segmentation mode or the contrast and you often get a *different* answer, stated just as confidently. On a small crop that is the normal case, not the exception.
 
-Treat any OCR digit you cannot see with your own eyes as a lead to verify, not a fact. There is also an **Invert** toggle for light-text-on-dark material, which sometimes helps and sometimes makes things worse; it is off by default and worth trying only when a read comes back poor.
+So when you select a region, SONAR reads it three ways — the engine's own layout analysis, a single-line read, and a raw-line read with layout heuristics switched off — and compares them.
+
+- **All three agree** — the strongest signal the tool can give you.
+- **Only one pass found anything** — weak. A lead to confirm, not a fact.
+- **They disagree** — you see every reading side by side, and if the *digits* differ you get told explicitly not to carry any number out of that photograph without confirming it elsewhere.
+
+This will not make OCR accurate. It makes it *honest*, which is more useful: a wrong number you know is wrong costs you nothing, and a wrong number you trust can cost you the whole investigation.
+
+### The limits, measured
+
+Tested against a real photograph where the target text was 60×8 pixels in the source:
+
+- Reading the full frame returned pure noise, no digits at all.
+- Selecting the region recovered the correct format and most of the correct digits.
+- No combination of scale, contrast, inversion or segmentation mode recovered the string exactly. Different settings produced *different* wrong answers.
+- More upscaling is not better. Past a point the interpolation softens glyph edges and accuracy falls again.
+
+Widely letter-spaced text — ships' names, signage — also reads badly regardless of size.
+
+There is an **Invert** toggle for light-text-on-dark material. On the test image it made the read worse. It is off by default and worth trying only when a read comes back poor.
 
 ### One thing to know before you use it
 
