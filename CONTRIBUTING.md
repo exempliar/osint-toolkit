@@ -22,7 +22,7 @@ A tool that returns an answer is half a tool. A tool that shows *why* that is th
 ## Adding a tool
 
 1. Create `tools/Your-Tool-Name.html`, following the conventions above.
-2. **Copy the shared base stylesheet verbatim.** Every tool's `<style>` opens with a block marked `OSINT TOOLKIT — SHARED BASE`, running from `:root` down to the `/* controls */` group. That block is byte-identical in all four tools and is what makes them read as one system. Copy it from any existing tool, then write your tool-specific rules below it under a `TOOLNAME — tool-specific` heading. Do not edit the shared block for one tool alone — if it needs to change, change it in every file.
+2. **Copy the two shared blocks verbatim.** Every tool's `<style>` opens with a block marked `OSINT TOOLKIT — SHARED BASE`, running from `:root` down to the hand-off row, and every tool's `<script>` opens with `OSINT TOOLKIT — SHARED HANDOFF`. Both are byte-identical in all three tools and are what make them one system rather than three files. Copy them from any existing tool, then write your tool-specific rules below, under a `TOOLNAME — tool-specific` heading. Do not edit a shared block for one tool alone — if it needs to change, change it in every file.
 
    What the shared base gives you:
    - **Tokens.** Background `#050507`, panels `#0d0d11` / `#101016`, borders `#1c1c24` / `#262630`, text `#e7e7ee`, muted `#8b8b98`, dim `#5a5a67`. Cyan `#2fe4d4` is the primary accent; magenta `#ff5db1`, amber `#ffcf5c`, green `#7be88a` are secondary. Square corners everywhere (`border-radius:0`).
@@ -30,9 +30,10 @@ A tool that returns an answer is half a tool. A tool that shows *why* that is th
    - **Components.** `.card` (panel with an inline `.eyebrow` label) and `.panelbox` (panel with an `h3` header strip and a `.body`); `button.act` with `.primary` / `.ghost`, `.btnrow`, `.chips` / `.chip`, `.hint`.
 
    Use these rather than inventing parallel ones. Uppercase letterspaced labels, monospace for indicators and file names.
-3. Add your tool to the `.toolnav` list in every other tool, and add the full list to your own with `class="here"` on your entry.
-4. Add a row to the table in `README.md`.
-5. If it completes or replaces a roadmap item, update the roadmap in `README.md`.
+3. **Join the hand-off contract.** Tools pass a selector to each other through the URL fragment — `Tool.html#q=<value>&t=<type>` — which works offline from disk with no storage and no server. Add your file to `TOOLKIT.files`, read an incoming selector with `TOOLKIT.read()` on load, and offer `TOOLKIT.send()` wherever your tool produces something another tool could use. Map the canonical types onto your own vocabulary rather than inventing new type names.
+4. Add your tool to the `.toolnav` list in every other tool, and add the full list to your own with `class="here"` on your entry.
+5. Add a row to the table in `README.md`.
+6. If it completes or replaces a roadmap item, update the roadmap in `README.md`.
 
 ## Safety conventions
 

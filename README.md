@@ -6,12 +6,15 @@ The goal is not just to automate lookups. It is to teach the method behind them,
 
 ## What is inside
 
+Three tools, one per stage of the work.
+
 | Tool | File | What it does |
 |------|------|--------------|
-| OSINT Learning Tool | [`tools/OSINT-Learning-Tool.html`](tools/OSINT-Learning-Tool.html) | Teaching-first pivot console. Type any indicator, learn where to look and why, get a model-agnostic AI prompt, paste findings back to extract pivots, and build an exportable case you can view as a node map. |
-| SONAR — Image OSINT Cockpit | [`tools/SONAR-OSINT-Cockpit.html`](tools/SONAR-OSINT-Cockpit.html) | Everything-from-a-picture cockpit. Drop an image, pull EXIF and OCR, copy a prompt to your AI, paste back to reconcile and pivot. Geolocation, transport visuals, and documents. **Needs a connection on first load** — see [below](#one-thing-to-know-before-you-use-it). |
-| MANIFEST — Records Cockpit | [`tools/MANIFEST-Records-Cockpit.html`](tools/MANIFEST-Records-Cockpit.html) | The non-image companion to SONAR. Pick an entity type, drop the selector, and get targeted registry and tracker lookups, a prompt tuned per type, first moves, and a findings log. |
-| DORK — Query Builder | [`tools/DORK-Query-Builder.html`](tools/DORK-Query-Builder.html) | Compose search queries across five engines with every operator explained as it goes in. Anatomy breakdown, cross-engine support matrix, and a checker for the mistakes that silently break a dork. |
+| MANIFEST — Entity Console | [`tools/MANIFEST-Entity-Console.html`](tools/MANIFEST-Entity-Console.html) | **Where to look.** Drop in a selector across sixteen entity types — from IP, domain and handle through to vessel, aircraft, military and historical. It names the entity, frames what you are trying to learn, gives you ordered first moves, maps the registries that answer it, extracts pivots from a pasted-back AI answer, and builds an exportable case you can view as a node map. |
+| SONAR — Image OSINT Cockpit | [`tools/SONAR-OSINT-Cockpit.html`](tools/SONAR-OSINT-Cockpit.html) | **What is in the picture.** Drop an image, pull EXIF and OCR, copy a prompt to your AI, paste back to reconcile and pivot. Geolocation, transport visuals, and documents. **Needs a connection on first load** — see [below](#one-thing-to-know-before-you-use-it). |
+| DORK — Query Builder | [`tools/DORK-Query-Builder.html`](tools/DORK-Query-Builder.html) | **What to type.** Compose search queries across five engines with every operator explained as it goes in. Anatomy breakdown, cross-engine support matrix, and a checker for the mistakes that silently break a dork. |
+
+They hand work to each other. A lead SONAR pulls out of a photograph goes straight to MANIFEST as the right entity type; a selector in MANIFEST goes to DORK as a ready-made query. The **Send to** buttons pass it through the URL fragment, so it works offline from disk with no storage and no server.
 
 More tools will land here over time. See the [roadmap](#roadmap).
 
@@ -25,7 +28,7 @@ LICENSE           MIT.
 
 Pick a tool from the table above, download the one file, and open it by double-click. Nothing else is needed — each tool is independent and runs offline from disk.
 
-Every tool carries a **Toolkit** switcher in its header linking to the other three. Those links resolve against the sibling files in the same folder, so they work once you have the whole `tools/` directory and do nothing if you grabbed a single file. Everything else in a tool works either way.
+Every tool carries a **Toolkit** switcher in its header linking to the other two. Those links resolve against the sibling files in the same folder, so they work once you have the whole `tools/` directory and do nothing if you grabbed a single file. Everything else in a tool works either way.
 
 To grab the whole repo:
 
@@ -33,38 +36,33 @@ To grab the whole repo:
 git clone https://github.com/exempliar/osint-toolkit.git
 ```
 
-## OSINT Learning Tool
+## MANIFEST — Entity Console
 
-Type any indicator (IP, domain, URL, email, username, hash, crypto wallet, person, phone, company, image, or topic). The tool names what it is, frames what you are actually trying to learn, and then walks you through the pivot.
+Drop in any selector and MANIFEST names the entity, frames what you are actually trying to learn from it, and walks you through working it.
+
+Sixteen entity types: IP, domain, URL, email, username, file hash, person, phone, company, crypto wallet, vessel, aircraft, military, historical, image, and topic. It detects the type where the shape of the value allows and you pick it from the grid where it does not.
 
 What it gives you:
 
-- **Detection and framing.** It recognizes the indicator type and states the question you should be answering before you start clicking.
-- **Mapped sources with reasoning.** The places to look, each with a short note on *why* that source matters for this indicator type, not just a bare link.
+- **Detection and framing.** It recognises the entity and states the question you should be answering before you start clicking.
+- **First moves.** An ordered opening sequence per entity type. The sources tell you where to look; this tells you what order to work them in, which is the part that saves time.
+- **Registries with reasoning.** The places worth checking, each with a note on *why* it matters for this entity, what it tells you, and where it pivots. Passive sources (safe to browse) and active sources (may alert the target) are marked differently.
 - **Model-agnostic AI prompts** in four modes: Learn, Pivot, Verify, and Report. Copy the prompt, run it in whatever AI you use, and bring the answer back.
-- **Paste-back pivot extraction.** Drop the AI's answer into the tool and it pulls out new indicators as clickable pivots, so a lead turns into the next step.
-- **A running Case,** viewable as a list or as a node map so the chain of pivots is visible, and exportable to Markdown.
-- **Local memory.** Favorites, notes, and custom sources persist in the browser you open it in. Nothing is uploaded anywhere.
-
-### Run it locally
-
-1. Download [`tools/OSINT-Learning-Tool.html`](tools/OSINT-Learning-Tool.html) (on the file page, click the download / raw button and save it).
-2. Double-click the file. It opens in your default browser and runs fully offline.
-3. That is it. No install, no accounts, no server.
+- **Paste-back pivot extraction.** Drop the AI's answer in and it pulls out new selectors as clickable pivots.
+- **A running case,** viewable as a list or a node map, exportable to Markdown.
+- **Local memory.** Favourites, notes, and custom sources persist in the browser you open it in. Nothing is uploaded anywhere.
 
 ### How to use it, step by step
 
-1. **Type an indicator** into the input at the top (for example an email, a domain, or a username). The tool detects the type. If it guesses wrong, override it with the dropdown.
-2. **Read the frame line.** It states what you are trying to learn from this kind of indicator. This is the part that teaches the method.
-3. **Work the sources.** Each listed source explains why it is worth checking for this indicator type. Passive sources (safe to browse) and active sources (may alert the target) are marked differently, so you know what leaves a footprint.
-4. **Pick a prompt mode and copy it:**
-   - **Learn** builds your background understanding of the indicator type.
-   - **Pivot** asks the AI for the next indicators to chase.
-   - **Verify** pressure-tests a finding before you trust it.
-   - **Report** turns what you have into a clean writeup.
-5. **Run the prompt in your AI**, then **paste the answer back** into the tool. It extracts any new indicators as clickable pivots.
-6. **Click a pivot** to start the loop again on the new lead. The Case grows as you go.
-7. **Switch the Case to map view** to see the chain of pivots as a node graph, and **export to Markdown** when you are done.
+1. **Drop in a selector** — an email, a domain, a company, a ship's IMO number. It detects the type; if it guesses wrong, click the right entity in the grid.
+2. **Read the frame line.** It states what you are trying to learn from this kind of entity. This is the part that teaches the method.
+3. **Work the first moves in order.** They are sequenced so early findings narrow the later ones.
+4. **Work the sources.** Each one explains why it is worth checking, and whether it leaves a footprint.
+5. **Pick a prompt mode and copy it** — Learn builds background, Pivot asks for next steps, Verify pressure-tests a finding, Report turns it into a writeup.
+6. **Paste the AI's answer back** to extract new selectors as pivots, or hand one to DORK with **Send to**.
+7. **Switch the case to map view** to see the chain of pivots, and **export to Markdown** when you are done.
+
+MANIFEST makes no network requests of its own. Every lookup is a link you choose to open.
 
 ## SONAR — Image OSINT Cockpit
 
@@ -83,16 +81,6 @@ What this means in practice:
 - **Your images are never uploaded.** Both libraries run inside your browser. No image, and nothing you type, is transmitted anywhere.
 - **You need a connection on first load** for EXIF and OCR to work. Offline, the rest of the tool still opens and it tells you plainly that the libraries did not load, rather than failing silently.
 - **The CDN sees a request** from your IP for two very common open-source libraries, as it would for any of the thousands of ordinary sites that use them.
-
-## MANIFEST — Records Cockpit
-
-The non-image companion to SONAR, for the recon, company, vessel, and infrastructure work that image tooling does not touch.
-
-Pick an entity type — person, company, vessel, aircraft, domain and infrastructure, username, military, or historical — drop in your selector, and MANIFEST builds targeted lookups that inject the selector straight into the right registries and trackers. Each entity type comes with a research prompt tuned to it, a set of suggested first moves, and a findings log.
-
-**Teaches** which registry actually answers which question, and what order to work an entity in so early findings narrow the later ones.
-
-MANIFEST makes no network requests of its own. Every lookup is a link you choose to open.
 
 ## DORK — Query Builder
 
@@ -120,7 +108,7 @@ Applies to every tool in this repo:
 - Anything you type stays in your browser. Favorites, notes, findings, and cases use local browser storage, which never leaves your machine, and none of it is written back into the HTML file.
 - Prompts are copy and paste on purpose, so the tools stay model-agnostic and you stay in control of what goes to any AI.
 - Passive vs active sources are labeled so you can avoid tipping off a target when that matters.
-- The Learning Tool and MANIFEST make no network requests at all. SONAR loads two libraries from a CDN, as described above.
+- MANIFEST and DORK make no network requests at all. SONAR loads two libraries from a CDN, as described above.
 
 Use these only against targets you are authorized to investigate, and follow the terms of service of the sources you visit.
 
@@ -131,7 +119,7 @@ Planned and in consideration:
 - Step-by-step playbooks per indicator type (ordered first moves).
 - A decode and convert workbench — identify and convert encodings, timestamps, and coordinate formats, and explain how each was recognised.
 - A timeline reconciler — build a chronology from events across sources with mixed timezones, and flag contradictions.
-- More self-contained tools alongside the Learning Tool.
+- More self-contained tools alongside these three.
 
 ## Contributing
 

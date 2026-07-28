@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OSINT Learning Tool</title>
+<title>MANIFEST — Entity Console</title>
 <style>
   /* ============================================================
      OSINT TOOLKIT — SHARED BASE
@@ -113,6 +113,19 @@
   /* ============================================================
      OSINT LEARNING TOOL — tool-specific
      ============================================================ */
+
+  /* entity grid — every type visible at once, rather than hidden in a select */
+  .types{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:0;padding:1px 0 0 1px;margin:0 0 20px}
+  .types button{font-size:11.5px;letter-spacing:.3px;color:var(--muted);background:transparent;padding:9px 6px;display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center;margin:-1px 0 0 -1px}
+  .types button:hover{color:var(--txt);border-color:var(--cyan);position:relative;z-index:1}
+  .types button.on{color:var(--cyan);border-color:var(--cyan);position:relative;z-index:1}
+  .types button .ico{font-size:15px;line-height:1}
+
+  /* first moves */
+  .moves{margin:0;padding-left:18px;font-size:12.5px;color:#cfd0d8}
+  .moves li{margin:0 0 7px}
+  .moves li:last-child{margin-bottom:0}
+  .pivotline{margin:12px 0 0;padding-left:11px;border-left:2px solid var(--mag);font-size:12.5px;color:var(--muted)}
 
   .inputrow{display:flex;gap:0;border:1px solid var(--line2);align-items:stretch}
   .inputrow input{flex:1;border:none;background:transparent;padding:14px 16px;font-size:16px}
@@ -247,8 +260,8 @@
 
   <header class="top">
     <div class="brand">
-      <h1>OSINT<span class="dot">.</span>LEARNING</h1>
-      <span class="tag">type a value · learn where to look, and why</span>
+      <h1>MANIFEST<span class="dot">.</span>ENTITIES</h1>
+      <span class="tag">name the entity · learn where to look, and why</span>
     </div>
     <nav class="topnav">
       <a id="nav-tradecraft">Tradecraft</a>
@@ -259,34 +272,41 @@
 
   <nav class="toolnav">
     <span class="lb">Toolkit</span>
-    <a class="here" href="OSINT-Learning-Tool.html">Learning</a>
+    <a class="here" href="MANIFEST-Entity-Console.html">Manifest</a>
     <a href="DORK-Query-Builder.html">Dork</a>
     <a href="SONAR-OSINT-Cockpit.html">Sonar</a>
-    <a href="MANIFEST-Records-Cockpit.html">Manifest</a>
   </nav>
 
   <div class="inputrow">
-    <input id="q" class="mono" placeholder="Paste an IP, domain, email, username, hash, name, wallet, or a topic..." autocomplete="off" spellcheck="false">
+    <input id="q" class="mono" placeholder="Paste a selector — name, company, domain, handle, vessel, registration…" autocomplete="off" spellcheck="false">
   </div>
   <div class="detect">
     <span>Detected:</span>
     <span class="k" id="detected">topic</span>
-    <span>Not right?</span>
-    <select id="override"></select>
+    <span>Not right? Pick the entity below.</span>
   </div>
+  <div class="types" id="types"></div>
 
   <p class="frameline" id="frame"></p>
   <div style="margin:-12px 2px 22px;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
     <button id="addcase" style="padding:6px 12px;font-size:11.5px;letter-spacing:.5px;color:var(--muted)">+ Add this value to case</button>
     <span class="sendto" style="margin:0">
       <span class="lb">Send to</span>
-      <button id="send-manifest">Manifest &rarr;</button>
       <button id="send-dork">Dork &rarr;</button>
+      <button id="send-sonar">Sonar &rarr;</button>
     </span>
   </div>
 
   <div class="cols">
     <div class="main">
+
+      <div class="panelbox" id="movesbox">
+        <h3>First moves</h3>
+        <div class="body">
+          <ol class="moves" id="moves"></ol>
+          <p class="pivotline" id="pivotline"></p>
+        </div>
+      </div>
 
       <div class="prompts">
         <div class="section-label">AI prompt (copy into any model)</div>
@@ -392,8 +412,10 @@
   <div class="box">
     <div class="mh"><h2>About</h2><button class="close" data-close>&times;</button></div>
     <div class="mb">
-      <p style="margin-top:0;color:#cfd0d8">A single file that teaches OSINT by doing. Type one value: it names what you are holding, frames what you are trying to learn, hands you a model-agnostic AI prompt, and maps where to look and where to pivot, with the reasoning attached.</p>
+      <p style="margin-top:0;color:#cfd0d8">MANIFEST is a single file that teaches OSINT by doing. Drop in one selector: it names the entity you are holding, frames what you are actually trying to learn, gives you an ordered set of first moves, hands you a model-agnostic AI prompt, and maps where to look and where to pivot, with the reasoning attached to every source.</p>
+      <p style="color:#cfd0d8">Sixteen entity types, from the technical indicators through to vessels, aircraft, military assets, and historical subjects. Each one carries the registries that actually answer it and the order to work them in.</p>
       <p style="color:#cfd0d8">This is a launcher and a teacher, not a scraper. It never fetches data or touches a target. Links open in a new tab; the AI prompts are copy and paste into whatever model you use.</p>
+      <p style="color:#cfd0d8">It is one of three tools that work together: <b>MANIFEST</b> for entities, <b>SONAR</b> for images, <b>DORK</b> for search queries. The Send to buttons hand a selector straight across.</p>
       <p style="color:#cfd0d8">Save it locally and it remembers your favorites, notes, and any sources you add. Share it and each person builds their own copy.</p>
       <p class="muted-note">Passive means you query a third party, not the target. Active means your action touches the target. Active sources are marked. Think before you run them.</p>
     </div>
@@ -412,8 +434,8 @@
    Change it here, change it in the others too.
    ============================================================ */
 var TOOLKIT = {
-  files:{learning:"OSINT-Learning-Tool.html", dork:"DORK-Query-Builder.html",
-         sonar:"SONAR-OSINT-Cockpit.html",    manifest:"MANIFEST-Records-Cockpit.html"},
+  files:{manifest:"MANIFEST-Entity-Console.html", dork:"DORK-Query-Builder.html",
+         sonar:"SONAR-OSINT-Cockpit.html"},
   /* canonical selector types; each tool maps these onto its own vocabulary */
   alias:{handle:"username", user:"username", infra:"domain", host:"domain",
          hostname:"domain", org:"company", name:"person", wallet:"crypto", tel:"phone"},
@@ -450,18 +472,22 @@ var TOOLKIT = {
 /* ---------------- DATA ---------------- */
 
 var INDICATORS = {
-  ip:{label:"IP address", frame:"You are learning what this host is, who runs it, its reputation, and what it connects to."},
-  domain:{label:"Domain", frame:"You are learning who owns it, its infrastructure and history, and whether it is malicious."},
-  url:{label:"URL", frame:"You are learning where this link really goes, what it serves, and whether it is hostile, without clicking it."},
-  email:{label:"Email address", frame:"You are learning who is behind it, where it has been exposed, and what accounts it links to."},
-  username:{label:"Username", frame:"You are learning where this handle exists across platforms and which accounts belong to the same person."},
-  hash:{label:"File hash", frame:"You are learning if this file is known malware, what it does, and who has reported it."},
-  person:{label:"Person / name", frame:"You are learning what is publicly known about this person and how to corroborate it."},
-  phone:{label:"Phone number", frame:"You are learning the line type, carrier, region, and any accounts or listings tied to it."},
-  company:{label:"Company / org", frame:"You are learning the legal entity, ownership, filings, and digital footprint."},
-  crypto:{label:"Crypto wallet", frame:"You are learning the balance, transaction history, and any abuse or attribution tied to the address."},
-  image:{label:"Image", frame:"You are learning where else the image appears, what it depicts, and what its metadata reveals. This lane is manual: use the tools, upload or paste the image there."},
-  topic:{label:"Topic / subject", frame:"You have no single indicator. You are scoping a subject and finding primary sources to build from."}
+  ip:{ico:"\ud83d\udce1", label:"IP address", hint:"an IP address", frame:"You are learning what this host is, who runs it, its reputation, and what it connects to."},
+  domain:{ico:"\ud83c\udf10", label:"Domain", hint:"a domain or hostname", frame:"You are learning who owns it, its infrastructure and history, and whether it is malicious."},
+  url:{ico:"\ud83d\udd17", label:"URL", hint:"a full URL", frame:"You are learning where this link really goes, what it serves, and whether it is hostile, without clicking it."},
+  email:{ico:"\u2709\ufe0f", label:"Email", hint:"an email address", frame:"You are learning who is behind it, where it has been exposed, and what accounts it links to."},
+  username:{ico:"@", label:"Username", hint:"a single handle", frame:"You are learning where this handle exists across platforms and which accounts belong to the same person."},
+  hash:{ico:"#", label:"File hash", hint:"a file hash", frame:"You are learning if this file is known malware, what it does, and who has reported it."},
+  person:{ico:"\ud83e\udded", label:"Person", hint:"a full name", frame:"You are learning what is publicly known about this person and how to corroborate it."},
+  phone:{ico:"\u260e\ufe0f", label:"Phone", hint:"a phone number", frame:"You are learning the line type, carrier, region, and any accounts or listings tied to it."},
+  company:{ico:"\ud83c\udfe2", label:"Company", hint:"a company or organisation", frame:"You are learning the legal entity, ownership, filings, and digital footprint."},
+  crypto:{ico:"\u20bf", label:"Wallet", hint:"a wallet address", frame:"You are learning the balance, transaction history, and any abuse or attribution tied to the address."},
+  vessel:{ico:"\ud83d\udea2", label:"Vessel", hint:"a ship name or IMO number", frame:"You are learning which hull this is, who owns and manages it, where it has been, and whether it or its owner is sanctioned."},
+  aircraft:{ico:"\u2708\ufe0f", label:"Aircraft", hint:"a registration or callsign", frame:"You are learning which airframe this is, who operates it, and where it has flown."},
+  military:{ico:"\ud83c\udf96\ufe0f", label:"Military", hint:"a unit, asset, or site", frame:"You are learning what the asset or unit is, where it is based, and what overhead imagery shows about the site over time."},
+  history:{ico:"\ud83d\udcdc", label:"Historical", hint:"an event, place, or person", frame:"You are learning what actually happened and when, from sources written at the time rather than about it since."},
+  image:{ico:"\ud83d\uddbc\ufe0f", label:"Image", hint:"an image — hand it to SONAR", frame:"You are learning where else the image appears, what it depicts, and what its metadata reveals. This lane is manual: hand the file to SONAR, or use the tools below."},
+  topic:{ico:"\ud83d\udd0d", label:"Topic", hint:"a subject or question", frame:"You have no single indicator. You are scoping a subject and finding primary sources to build from."}
 };
 
 // pivots: which other indicator types this one commonly leads to
@@ -476,8 +502,113 @@ var PIVOTS = {
   phone:["person","username"],
   company:["domain","person","email"],
   crypto:["url","topic"],
+  vessel:["company","person","topic"],
+  aircraft:["company","person","topic"],
+  military:["topic","person","company"],
+  history:["person","company","topic"],
   image:["person","username","topic"],
   topic:["person","company","domain"]
+};
+
+/* Ordered opening moves per entity type. The sources tell you where to look;
+   these tell you what order to work them in, which is the part that saves time. */
+var MOVES = {
+  ip:{steps:[
+    "Reputation first, and passively: VirusTotal and AbuseIPDB tell you if this is already known-bad before you touch anything.",
+    "Establish what it runs from someone else's scan data (Shodan, Censys) rather than scanning it yourself.",
+    "Check GreyNoise. If the IP mass-scans the whole internet, a hit in your logs probably means nothing about you.",
+    "Resolve ownership: ASN and netblock give you the operator, which is usually a more useful entity than the address."],
+    pivot:"Pivot: IP → ASN/netblock → operator → hosted domains → certificates → sibling hosts."},
+  domain:{steps:[
+    "WHOIS and its history: registrar, dates, and any registrant details recorded before privacy was switched on.",
+    "Enumerate subdomains from certificate transparency (crt.sh). Certificates are published, so they leak assets for free.",
+    "See what it served without visiting it: Wayback for pages, urlscan for requests and screenshots.",
+    "Stay passive. Resolving DNS is fine; actively scanning the host is not, and it puts you in their logs."],
+    pivot:"Pivot: domain → registrant email or org → other domains → subdomains → hosting IP."},
+  url:{steps:[
+    "Never click it. Put it through urlscan or VirusTotal and read what they saw.",
+    "Follow the redirect chain: the destination matters more than the link you were handed.",
+    "Check the archive. If the page has changed since the link was shared, the old version is the evidence.",
+    "Reduce it to its domain and work that lane too."],
+    pivot:"Pivot: URL → final destination → domain → hosting → files served."},
+  email:{steps:[
+    "Breach check first (Have I Been Pwned). Exposure tells you which services the address was used for.",
+    "Search the address as an exact quoted string; a single leaked posting often names the person.",
+    "Split it: the local part is frequently a reusable handle, the domain is an employer or provider.",
+    "Verify existence without sending anything. Never email the target to test an address."],
+    pivot:"Pivot: email → handle → accounts → real name → employer."},
+  username:{steps:[
+    "A handle is a strong selector — far stronger than a name. Sweep it across platforms with WhatsMyName or Sherlock.",
+    "Eyeball every hit. These tools guess from HTTP responses and they produce false positives.",
+    "Mine a confirmed profile for new selectors: linked sites, an email, a real name, a second handle.",
+    "Try near-variants. People carry the same handle with a suffix or separator when it is already taken."],
+    pivot:"Pivot: handle → confirmed profiles → bio links, email, real name → new handles → sweep again."},
+  hash:{steps:[
+    "Look it up before you ever run it. VirusTotal and MalwareBazaar will usually already know the sample.",
+    "Read a sandbox report for behaviour: what it contacts, writes, and persists.",
+    "Take the network indicators it drops and work those as their own lanes.",
+    "No detections means unknown, not clean. Absence of evidence is not evidence of absence here."],
+    pivot:"Pivot: hash → sandbox report → contacted domains and IPs → infrastructure."},
+  person:{steps:[
+    "A name alone is weak. Pair it with a city, employer, school, or handle before you search, or you will drown in namesakes.",
+    "Search engines with quotes first, then image search the name for a face you can hand to SONAR.",
+    "If you have an email or handle, that is your strong selector — switch to that lane and come back.",
+    "Check sanctions and PEP lists. If they are listed, everything else you find reads differently."],
+    pivot:"Pivot: name → photo → reverse image → employer or school → colleagues → handle → accounts."},
+  phone:{steps:[
+    "Establish the shape first: country code, region, and whether the line is mobile, landline, or VoIP.",
+    "Search every format separately — E.164, national, with and without separators. They index differently.",
+    "Check messaging apps for a profile photo or display name, but understand that this can be visible to the owner.",
+    "Treat carrier lookups as a hint. Number portability makes them frequently stale."],
+    pivot:"Pivot: number → line type and region → listings → linked accounts → person."},
+  company:{steps:[
+    "Registry first: OpenCorporates for officers, addresses, and incorporation dates, then the national registry for the filings themselves.",
+    "Follow the money: SEC EDGAR for US filers, procurement and tender portals for contracts, annual reports for the numbers.",
+    "Ownership and risk: OpenSanctions and Aleph for links, listings, and leaked material.",
+    "Read documents line by line. The detail that matters usually sits in one row of a PDF or a spreadsheet."],
+    pivot:"Pivot: company → officers, address, phone → other companies at that address → beneficial owner."},
+  crypto:{steps:[
+    "Read the chain directly in an explorer. The ledger is public and it is the primary source.",
+    "Look at counterparties, not just balance. Who this address transacts with is the actual finding.",
+    "Check abuse databases: an address reported for a scam usually carries the story with it.",
+    "Clustering heuristics suggest common ownership. They are inferences, so label them as such."],
+    pivot:"Pivot: address → counterparties → clusters → exchange deposit addresses → reports."},
+  vessel:{steps:[
+    "The name is weak, the IMO number is the strong unique key. Get the IMO first and everything else keys off it.",
+    "Position and history from at least two AIS feeds, since coverage is built from volunteer receivers and has gaps.",
+    "Always run sanctions on both the hull and its owner. Shipping is where evasion concentrates.",
+    "Flag, owner, manager, and name changes are the evasion signal. Equasis ties them together."],
+    pivot:"Pivot: name → IMO → owner or manager company → company lane → sanctions."},
+  aircraft:{steps:[
+    "Get the registration from the livery. That tail number is the unique key to the airframe.",
+    "Photo history (Planespotters, JetPhotos) confirms type, operator, and past liveries, which dates an image.",
+    "Track history on FR24 and ADS-B Exchange — the latter matters, since it does not honour blocking requests.",
+    "The registration prefix gives you the country of registry before you look anything up."],
+    pivot:"Pivot: livery → registration → operator → route on the date → specific flight."},
+  military:{steps:[
+    "Identify the object from its silhouette, hull or tail number, insignia, and camouflage, against published references.",
+    "Geolocate the site, then use historical imagery layers to see how it changed and when.",
+    "Date it from imagery capture dates rather than from a claim attached to the photograph.",
+    "Observe only. Public defence data and photo archives are fair game; nothing here should touch a target."],
+    pivot:"Pivot: asset photo → type and unit → home base → overhead imagery → date from imagery history."},
+  history:{steps:[
+    "Fix the date first. Everything else keys off the correct year, and a wrong one wastes the whole search.",
+    "Prefer sources written at the time over accounts written since. Newspapers beat retellings.",
+    "Match places across time with old maps and historical aerials — names and boundaries move.",
+    "Corroborate any claimed date against a second independent source, and watch for ambiguous date formats."],
+    pivot:"Pivot: place or event → date → contemporaneous source → named people → records."},
+  image:{steps:[
+    "Hand the file to SONAR first: it pulls EXIF and runs OCR over any text in the frame.",
+    "Reverse search on more than one engine. They index different corpora and Yandex is often strongest on places.",
+    "Assume metadata is gone. Anything posted to a social platform has been stripped, so read the visual clues.",
+    "Date the scene from what is in it — shadows, foliage, signage, construction — not from the file's timestamp."],
+    pivot:"Pivot: image → extracted text and metadata → place or person → the matching entity lane."},
+  topic:{steps:[
+    "Narrow to something with a name. A topic is not a selector, so your first job is finding one.",
+    "Go for primary sources: filings, court records, datasets, and official publications rather than coverage of them.",
+    "Work the archive as well as the live web; what was taken down is often the interesting part.",
+    "Note the people and organisations that recur, then switch to those lanes."],
+    pivot:"Pivot: topic → named people and organisations → documents → selectors you can actually pivot on."}
 };
 
 // s(name, url-or-null, tells, why, pivot, collection, cost, level)
@@ -546,6 +677,7 @@ var SOURCES = {
     s("That'sThem","https://thatsthem.com/name/{{input}}","Public contact and address records.","Free people-record lookup.","Phone and address to new lanes.","passive","free"),
     s("FastPeopleSearch","https://www.fastpeoplesearch.com/name/{{input}}","US address, phone, relatives.","Strong free US public-records source.","Relatives and prior addresses.","passive","free"),
     s("LinkedIn (via Google)","https://www.google.com/search?q=site%3Alinkedin.com+%22{{input}}%22","Professional history and employer.","Finds the profile without logging in.","Employer to company lane.","passive","free"),
+    s("OpenSanctions","https://www.opensanctions.org/search/?q={{input}}","Sanctions lists, PEP designations, and watchlist entries.","Whether someone is a politically exposed person or listed changes what every other source means.","Listed associates and the companies they hold.","passive","free"),
     s("WebMii","https://webmii.com/people?n=%22{{input}}%22","Web presence score and links.","Surfaces links a name search buries.","Profiles and mentions.","passive","free")
   ],
   phone:[
@@ -561,6 +693,8 @@ var SOURCES = {
     s("Aleph (OCCRP)","https://aleph.occrp.org/search?q={{input}}","Investigative datasets and leaks.","Cross-border records and leak archives.","Linked people and entities.","passive","free"),
     s("Crunchbase","https://www.crunchbase.com/textsearch?q={{input}}","Funding, people, and profile.","Fast profile for tech and startups.","Founders and domains.","passive","account"),
     s("Google (site + name)","https://www.google.com/search?q=%22{{input}}%22","Open web footprint.","Grounds the entity in its own pages.","Official domain and staff.","passive","free"),
+    s("OpenSanctions","https://www.opensanctions.org/search/?q={{input}}","Sanctions, ownership links, and watchlist entries.","The fastest check on whether an entity is subject to restrictions, and it exposes the network around it.","Linked entities and their officers.","passive","free"),
+    s("GLEIF LEI","https://search.gleif.org/#/search/simpleSearch={{input}}","The Legal Entity Identifier and its registered details.","An LEI is a globally unique key for a legal entity, which cuts through similar trading names.","LEI to filings and parent entities.","passive","free"),
     s("BuiltWith","https://builtwith.com/","Tech stack of the company site.","Infra and vendor footprint. Enter the domain.","Analytics and hosting to pivots.","passive","free")
   ],
   crypto:[
@@ -569,6 +703,38 @@ var SOURCES = {
     s("Blockchain.com","https://www.blockchain.com/explorer/addresses/btc/{{input}}","Bitcoin balance and transactions.","Authoritative BTC explorer.","Input and output addresses.","passive","free"),
     s("Chainabuse","https://www.chainabuse.com/address/{{input}}","Community scam and abuse reports.","Tells you if the address is reported bad.","Linked scams and addresses.","passive","free"),
     s("OXT / clustering","https://oxt.me/","Bitcoin flow and clustering views.","Visual flow analysis for BTC. Search on page.","Clustered wallets.","passive","free","intermediate")
+  ],
+  vessel:[
+    s("MarineTraffic","https://www.marinetraffic.com/en/ais/index/search/all?keyword={{input}}","AIS positions, port calls, particulars, past names.","Movement is the spine of vessel work: where a hull has been is usually the question.","Owner and manager names into the company lane.","passive","free"),
+    s("VesselFinder","https://www.vesselfinder.com/vessels?name={{input}}","A second AIS view of position and history.","AIS coverage is built from volunteer receivers, so a gap in one network is often filled by another. Never trust a single feed.","Port calls to dates and places.","passive","free"),
+    s("Balticshipping","https://www.balticshipping.com/vessels?imo={{input}}","IMO-keyed particulars and the full name history.","Renaming is the commonest way a hull sheds its past. The IMO number never changes, so it exposes what the name hides.","Former names back into the other trackers.","passive","free"),
+    s("Equasis","https://www.equasis.org/","Registered owner, manager, class society, inspection history.","Ties the steel to the companies behind it, which is where the actual ownership question gets answered.","Owner and manager into the company lane.","passive","account"),
+    s("OpenSanctions","https://www.opensanctions.org/search/?q={{input}}","Sanctions and watchlist entries for the vessel and its owners.","A listed hull or owner changes the whole picture, and shipping is where sanctions evasion concentrates.","Listed owners to their other vessels and companies.","passive","free"),
+    s("FleetMon","https://www.fleetmon.com/vessels/?q={{input}}","Vessel database and movement history.","Third opinion on particulars and past voyages.","Operator to company research.","passive","account"),
+    s("IMO number check","https://www.google.com/search?q=%22{{input}}%22+IMO","The number as a literal string across the open web.","Registries, port notices, and news carry the IMO where they omit the name.","Documents naming owners, charterers, and cargo.","passive","free")
+  ],
+  aircraft:[
+    s("Planespotters","https://www.planespotters.net/search?q={{input}}","Airframe history: type, build, operators, past liveries.","Establishes what the airframe is and everyone who has flown it, which dates a photograph.","Operators into the company lane.","passive","free"),
+    s("FlightRadar24","https://www.flightradar24.com/data/aircraft/{{input}}","Track history keyed to the registration.","Places the aircraft on specific routes and dates.","Routes and dates to specific flights.","passive","free"),
+    s("ADS-B Exchange","https://globe.adsbexchange.com/?reg={{input}}","Unfiltered ADS-B, including aircraft other feeds hide.","The only major feed that does not honour blocking requests, so it sees the aircraft that matter most.","Flights the commercial trackers omit.","passive","free"),
+    s("JetPhotos","https://www.jetphotos.com/registration/{{input}}","Dated photographs indexed by registration.","Photographs carry dates and liveries, which is how you place an airframe in time.","Livery changes to operator timelines.","passive","free"),
+    s("FAA registry","https://registry.faa.gov/aircraftinquiry/Search/NNumberResult?nNumberTxt={{input}}","US registration: owner of record, type, status.","For any N-registered aircraft this is the authoritative owner.","Registered owner into the company lane.","passive","free"),
+    s("Registration prefix","https://en.wikipedia.org/wiki/List_of_aircraft_registration_prefixes","What the country prefix means (N=US, G=UK, JA=Japan).","The prefix tells you the country of registry before you look anything up.","Country of registry to the right national registry.","passive","free")
+  ],
+  military:[
+    s("Google Earth","https://earth.google.com/web/","Satellite imagery with a historical layer.","The history slider is the point: comparing a site across years shows construction, arrivals, and departures.","Dated changes to a timeline.","passive","free"),
+    s("Sentinel Hub EO Browser","https://apps.sentinel-hub.com/eo-browser/","Free dated Sentinel imagery you can step through.","Fills the gaps between commercial captures, with an exact date on every image.","Capture dates to corroborate or refute a claimed timeline.","passive","free"),
+    s("Copernicus Browser","https://browser.dataspace.copernicus.eu/","ESA's own archive of Sentinel data.","Second source for the same imagery, with a different processing chain.","Imagery dates and bands.","passive","free"),
+    s("Wikipedia orbats","https://en.wikipedia.org/w/index.php?search={{input}}","Orders of battle, insignia, equipment references.","Good enough to identify a unit or type from a silhouette or patch, and it cites its sources.","Unit to home base; type to operator.","passive","free"),
+    s("Wikimapia","https://wikimapia.org/","Crowd-annotated map of sites and installations.","Contributors label facilities that official maps leave blank.","Named sites to coordinates.","passive","free")
+  ],
+  history:[
+    s("Wayback Machine","https://web.archive.org/web/*/{{input}}","Archived versions of pages that have changed or vanished.","The web is not a record; the archive is. What was removed is often the point.","Removed pages, old staff lists, prior claims.","passive","free"),
+    s("Chronicling America","https://chroniclingamerica.loc.gov/search/pages/results/?andtext={{input}}","Digitised US newspapers, searchable full text.","Contemporaneous reporting beats later retellings, and names the people who were actually there.","Named people and places to records.","passive","free"),
+    s("Google Books","https://www.google.com/search?tbm=bks&q={{input}}","Full-text search across scanned books.","Depth that the open web does not carry, and it surfaces footnotes leading to primary sources.","Cited archives and collections.","passive","free"),
+    s("OldMapsOnline","https://www.oldmapsonline.org/","Historical maps indexed by place and date.","Place names and boundaries move. A modern map will mislead you about anything older than it.","Former place names to search terms.","passive","free"),
+    s("HistoricAerials","https://www.historicaerials.com/","Aerial photography going back decades.","Shows a site before the imagery everyone else is looking at.","Dated changes to the ground.","passive","free"),
+    s("Wikidata","https://www.wikidata.org/w/index.php?search={{input}}","Structured facts with source citations.","Gives you dates and identifiers in a form you can check, rather than prose to trust.","Identifiers into national archives.","passive","free")
   ],
   image:[
     s("Yandex Images","https://yandex.com/images/","Reverse image search, strong on places and faces.","Often the best reverse-image engine. Upload or paste URL.","Locations and people to new lanes.","passive","free"),
@@ -619,6 +785,8 @@ var MEM_OK = (function(){ try{ var k="__olt"; localStorage.setItem(k,"1"); local
 function memGet(k,def){ if(!MEM_OK) return def; try{ var v=localStorage.getItem(k); return v==null?def:JSON.parse(v); }catch(e){ return def; } }
 function memSet(k,v){ if(!MEM_OK) return; try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
 
+/* Storage keys keep the olt_ prefix from before the merge so that anyone
+   who already had favourites, notes and custom sources keeps them. */
 var favorites = memGet("olt_favorites", []);        // array of "type::name"
 var customSources = memGet("olt_custom", {});        // type -> [sourceObj]
 var caseData = memGet("olt_case", {entities:[], opened:[]}); // {entities:[{value,type}], opened:[{name,type,url}]}
@@ -639,6 +807,11 @@ function detect(v){
   if(/^[0-9a-f:]+:[0-9a-f:]+$/i.test(v) && v.indexOf(":")>-1 && /[0-9a-f]/i.test(v)) return "ip";
   if(/^\+?[\d][\d\s().-]{6,}$/.test(v)) return "phone";
   if(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(low) && /\.[a-z]{2,}$/i.test(low)) return "domain";
+  // an IMO only counts when it says so: a bare 7-digit number is far more often a phone number
+  if(/^imo[\s:-]*\d{7}$/i.test(v)) return "vessel";
+  // hyphenated civil registrations (G-ABCD, JA-8089) are distinctive enough to claim
+  if(/^[a-z]{1,2}-[a-z0-9]{3,5}$/i.test(v)) return "aircraft";
+  if(/^n\d{2,5}[a-z]{0,2}$/i.test(v)) return "aircraft";
   if(/^[@]?[a-z0-9_.\-]{2,30}$/i.test(v) && v.indexOf(" ")===-1) return "username";
   if(/\b(inc|llc|ltd|corp|gmbh|group|holdings|technologies|systems|labs)\b/i.test(v)) return "company";
   if(/^[a-z][a-z'.-]+\s+[a-z][a-z'.-]+/i.test(v) && v.split(/\s+/).length<=4) return "person";
@@ -661,17 +834,30 @@ function buildLink(url,value){
 
 /* ---------------- RENDER ---------------- */
 
-function renderOverride(){
-  var sel = el("override"); sel.innerHTML="";
+function renderTypes(){
+  var box = el("types"); box.innerHTML="";
   Object.keys(INDICATORS).forEach(function(k){
-    var o=document.createElement("option"); o.value=k; o.textContent=INDICATORS[k].label; sel.appendChild(o);
+    var t = INDICATORS[k];
+    var b = document.createElement("button");
+    b.setAttribute("data-t", k);
+    b.title = t.hint;
+    if(k === state.type) b.className = "on";
+    b.innerHTML = '<span class="ico">'+t.ico+'</span>'+esc(t.label);
+    box.appendChild(b);
   });
-  sel.value = state.type;
+  el("q").placeholder = "Paste " + INDICATORS[state.type].hint + "\u2026";
+}
+
+function renderMoves(){
+  var m = MOVES[state.type];
+  if(!m){ el("movesbox").style.display="none"; return; }
+  el("movesbox").style.display="";
+  el("moves").innerHTML = m.steps.map(function(x){ return "<li>"+esc(x)+"</li>"; }).join("");
+  el("pivotline").textContent = m.pivot;
 }
 
 function renderFrameAndDetect(){
   el("detected").textContent = INDICATORS[state.type].label;
-  el("override").value = state.type;
   el("frame").textContent = INDICATORS[state.type].frame;
 }
 
@@ -871,10 +1057,10 @@ function renderExtracted(found){
     row.innerHTML='<span class="ty">'+esc(INDICATORS[it.type]?INDICATORS[it.type].label:it.type)+'</span>'+
       '<span class="vl">'+esc(it.value)+'</span>'+
       '<span class="go">investigate</span>'+
-      '<span class="snd">manifest &rarr;</span>'+
+      '<span class="snd">dork &rarr;</span>'+
       '<span class="add'+(inCase?' in':'')+'">'+(inCase?'in case':'+ case')+'</span>';
     row.querySelector(".go").onclick=function(){ investigate(it.value); };
-    row.querySelector(".snd").onclick=function(){ TOOLKIT.send("manifest",it.value,it.type); };
+    row.querySelector(".snd").onclick=function(){ TOOLKIT.send("dork",it.value,it.type); };
     row.querySelector(".add").onclick=function(){ caseAddEntity(it.value,it.type); renderExtracted(found); };
     box.appendChild(row);
   });
@@ -918,7 +1104,7 @@ function renderCase(){
 }
 
 function exportCase(){
-  var lines=["# OSINT Case","","_Generated by OSINT Learning Tool. Runs offline; verify every finding._",""];
+  var lines=["# OSINT Case","","_Generated by MANIFEST (osint-toolkit). Runs offline; verify every finding._",""];
   lines.push("## Entities collected ("+caseData.entities.length+")","");
   if(caseData.entities.length) caseData.entities.forEach(function(e){ lines.push("- ["+(INDICATORS[e.type]?INDICATORS[e.type].label:e.type)+"] "+e.value); });
   else lines.push("_None yet._");
@@ -948,6 +1134,7 @@ function closeModals(){ ["m-tradecraft","m-add","m-about"].forEach(function(id){
 
 function refreshAll(fromInput){
   renderFrameAndDetect();
+  renderTypes(); renderMoves();
   renderModes(); renderPrompt();
   renderView();
   if(!fromInput) { state.selected=null; renderPanel(); }
@@ -963,9 +1150,11 @@ function onInput(){
 }
 
 function init(){
-  renderOverride();
   el("q").addEventListener("input", onInput);
-  el("override").addEventListener("change", function(){ state.type=el("override").value; state.selected=null; refreshAll(false); });
+  el("types").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    state.type = b.getAttribute("data-t"); state.selected = null; refreshAll(false);
+  });
   el("v-map").onclick=function(){ state.view="map"; renderView(); };
   el("v-list").onclick=function(){ state.view="list"; renderView(); };
   el("copyprompt").onclick=function(){ copy(el("prompt").value, el("copyprompt"), "Copy"); };
@@ -1001,8 +1190,8 @@ function init(){
 
   el("memstatus").textContent = MEM_OK ? "Memory on (this browser)." : "Memory off (private mode). Still fully usable.";
 
-  el("send-manifest").onclick=function(){ if(!TOOLKIT.send("manifest", state.value, state.type)) flash("Type a value first"); };
   el("send-dork").onclick=function(){ if(!TOOLKIT.send("dork", state.value, state.type)) flash("Type a value first"); };
+  el("send-sonar").onclick=function(){ if(!TOOLKIT.send("sonar", state.value, state.type)) flash("Type a value first"); };
 
   renderTradecraft();
   renderCase();
